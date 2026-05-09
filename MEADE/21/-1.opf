@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf" xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="dcidid">
+<metadata>
+  <dc:title>Der Ursprung der Familie,+++des Privateigentums+++und des Staats</dc:title>
+  <dc:language xsi:type="dcterms:RFC3066">de</dc:language>
+  <dc:identifier id="dcidid">hof-102345</dc:identifier>
+  <dc:creator opf:role="aut">Friedrich Engels</dc:creator>
+  <dc:creator opf:role="bkp">Zeno.org</dc:creator>
+  <dc:publisher>Zeno.org</dc:publisher>
+  <dc:description>Friedrich Engels: Der Ursprung der Familie, des Privateigentums und des Staats</dc:description>
+  <dc:date>2015-06-29</dc:date>
+  <dc:source></dc:source>
+  <dc:rights></dc:rights>
+  <meta name="cover" content="cover.jpg"/>
+</metadata>
+<manifest>
+  <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+  <item id="icoverpage" href="0.html" media-type="application/xhtml+xml" />
+  <item id="i1" href="1.html" media-type="application/xhtml+xml" />
+  <item id="i20009163751" href="20009163751.html" media-type="application/xhtml+xml" />
+  <item id="i2000916376X" href="2000916376X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163778" href="20009163778.html" media-type="application/xhtml+xml" />
+  <item id="i20009163786" href="20009163786.html" media-type="application/xhtml+xml" />
+  <item id="i20009163794" href="20009163794.html" media-type="application/xhtml+xml" />
+  <item id="i20009163808" href="20009163808.html" media-type="application/xhtml+xml" />
+  <item id="i20009163816" href="20009163816.html" media-type="application/xhtml+xml" />
+  <item id="i20009163824" href="20009163824.html" media-type="application/xhtml+xml" />
+  <item id="i20009163832" href="20009163832.html" media-type="application/xhtml+xml" />
+  <item id="i20009163840" href="20009163840.html" media-type="application/xhtml+xml" />
+  <item id="i20009163859" href="20009163859.html" media-type="application/xhtml+xml" />
+  <item id="i20009162615" href="20009162615.html" media-type="application/xhtml+xml" />
+  <item id="i2" href="2.html" media-type="application/xhtml+xml" />
+  <item id="ipt" href="page-template.xpgt" media-type="application/vnd.adobe-page-template+xml" />
+  <item id="icss" href="epub.css" media-type="text/css" />
+  <item id="cover.jpg" href="cover.jpg" media-type="image/jpeg" />
+</manifest>
+<spine toc="ncx">
+  <itemref idref="icoverpage" />
+  <itemref idref="i1" />
+  <itemref idref="i20009163751" />
+  <itemref idref="i2000916376X" />
+  <itemref idref="i20009163778" />
+  <itemref idref="i20009163786" />
+  <itemref idref="i20009163794" />
+  <itemref idref="i20009163808" />
+  <itemref idref="i20009163816" />
+  <itemref idref="i20009163824" />
+  <itemref idref="i20009163832" />
+  <itemref idref="i20009163840" />
+  <itemref idref="i20009163859" />
+  <itemref idref="i20009162615" />
+  <itemref idref="i2" />
+</spine>
+</package>

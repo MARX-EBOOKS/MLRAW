@@ -1,0 +1,434 @@
+/* http://meyerweb.com/eric/tools/css/reset/v2.0 | 20110126 License: none (public domain)*/
+html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, acronym, address, 
+big, cite, code,del, dfn, em, img, ins, kbd, q, s, samp,small, strike, strong, sub, sup, tt,
+var,b, u, i, center,dl, dt, dd, ol, ul, li,fieldset, form, label, legend,table, caption, tbody, 
+tfoot, thead, tr, th, td,article, aside, canvas, details, embed,figure, figcaption, footer, header, hgroup,menu, nav, output, ruby, section, summary,time, mark, audio, video {
+margin: 0;
+padding: 0;
+border: 0;
+font-size: 100%;
+font: inherit;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none; 
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+td {
+	padding: 0.4em;
+	vertical-align: top;
+}
+body {
+margin: 0.5em;
+}
+div.pageBreak {page-break-after: always; font-size: 1px; margin: 0; padding: 0; }
+a.page {
+  color: gray;
+  font-size: 80%;
+  text-decoration: none;
+  padding: 0 0.25em;
+}
+a.page:hover, a.page:active {
+  text-decoration: underline;
+}
+.zenoUnderline {
+  text-decoration: underline;
+}
+img.float {
+  height: 1em;
+}
+p {
+font-size: 100%;
+line-height: 140%;
+}
+
+br {
+font-size: 100%;
+line-height: 140%;
+padding-bottom: 11pt;
+}
+
+br.zenoHZA {
+font-size: 50%;
+line-height: 70%;
+padding-bottom: 5.5pt;
+}
+
+col {
+text-align: justify;
+}
+
+colgroup {
+text-align: justify;
+}
+
+h1 {
+font-size: 200%;
+line-height: 280%;
+font-weight: bold;
+text-align: center;
+}
+
+h2 {
+font-size: 160%;
+line-height: 224%;
+font-weight: bold;
+text-align: center;
+}
+
+h3 {
+font-size: 140%;
+line-height: 196%;
+font-weight: bold;
+text-align: center;
+}
+
+h4 {
+font-size: 120%;
+line-height: 168%;
+font-weight: bold;
+text-align: center;
+}
+
+h5 {
+font-size: 100%;
+line-height: 140%;
+font-weight: bold;
+padding-top: 3.3pt;
+padding-bottom: 7.7pt;
+text-align: center;
+}
+
+h6 {
+font-size: 100%;
+line-height: 140%;
+font-style: italic;
+font-weight: bold;
+padding-top: 3.3pt;
+padding-bottom: 7.7pt;
+text-align: center;
+}
+
+img.break {
+text-align: justify;
+}
+
+img.left {
+text-align: justify;
+}
+
+img.right {
+text-align: justify;
+}
+
+li {
+text-align: justify;
+}
+
+p {
+text-align: justify;
+}
+
+p.fn {
+font-style: italic;
+text-align: center;
+}
+
+p.zenoCellCenter {
+text-align: center;
+}
+
+p.zenoCellLeft {
+text-align: left;
+}
+
+p.zenoCellRight {
+text-align: right;
+}
+
+p.zenoLYm4n8 {
+padding-left: 2em;
+text-indent: -1em;
+text-align: left;
+}
+
+p.zenoLYm4n8 {
+padding-left: 2em;
+text-indent: -1em;
+text-align: left;
+}
+
+p.zenoPC {
+text-align: center;
+}
+
+p.zenoPLf0h40 {
+text-align: justify;
+}
+
+p.zenoPLm0n0 {
+text-align: justify;
+}
+
+p.zenoPLm0n4 {
+padding-left: 1em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm0n8 {
+padding-left: 2em;
+text-indent: -2em;
+text-align: justify;
+}
+
+p.zenoPLm12n0 {
+padding-left: 0em;
+text-indent: 3em;
+text-align: justify;
+}
+
+p.zenoPLm12n12 {
+padding-left: 3em;
+text-align: justify;
+}
+
+p.zenoPLm12n16 {
+padding-left: 4em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm12n8 {
+padding-left: 2em;
+text-indent: 1em;
+text-align: justify;
+}
+
+p.zenoPLm16n0 {
+padding-left: 0em;
+text-indent: 4em;
+text-align: justify;
+}
+
+p.zenoPLm16n16 {
+padding-left: 4em;
+text-align: justify;
+}
+
+p.zenoPLm16n20 {
+padding-left: 5em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm20n0 {
+padding-left: 0em;
+text-indent: 5em;
+text-align: justify;
+}
+
+p.zenoPLm20n16 {
+padding-left: 4em;
+text-indent: 1em;
+text-align: justify;
+}
+
+p.zenoPLm20n20 {
+padding-left: 5em;
+text-align: justify;
+}
+
+p.zenoPLm2024 {
+padding-left: 6em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm24n0 {
+padding-left: 0em;
+text-indent: 6em;
+text-align: justify;
+}
+
+p.zenoPLm24n24 {
+padding-left: 6em;
+text-align: justify;
+}
+
+p.zenoPLm2428 {
+padding-left: 7em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm28n28 {
+padding-left: 7em;
+text-align: justify;
+}
+
+p.zenoPLm32n32 {
+padding-left: 8em;
+text-align: justify;
+}
+
+p.zenoPLm36n36 {
+padding-left: 9em;
+text-align: justify;
+}
+
+p.zenoPLm4n0 {
+padding-left: 0em;
+text-indent: 1em;
+text-align: justify;
+}
+
+p.zenoPLm4n12 {
+padding-left: 3em;
+text-indent: -2em;
+text-align: justify;
+}
+
+p.zenoPLm4n16 {
+padding-left: 4em;
+text-indent: -3em;
+text-align: justify;
+}
+
+p.zenoPLm4n4 {
+padding-left: 1em;
+text-align: justify;
+}
+
+p.zenoPLm4n8 {
+padding-left: 2em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm8n12 {
+padding-left: 3em;
+text-indent: -1em;
+text-align: justify;
+}
+
+p.zenoPLm8n4 {
+padding-left: 1em;
+text-indent: 1em;
+text-align: justify;
+}
+
+p.zenoPLm8n8 {
+padding-left: 2em;
+text-align: justify;
+}
+
+p.zenoPR {
+text-align: right;
+}
+
+p.zenoPRf0h40 {
+text-align: right;
+}
+
+table {
+text-align: justify;
+}
+
+tbody {
+text-align: justify;
+}
+
+td {
+text-align: justify;
+}
+
+tr {
+text-align: justify;
+}
+
+ul {
+text-align: justify;
+}
+
+span {
+}
+
+a {
+}
+
+b {
+font-weight: bold;
+}
+
+fnref {
+display: none;
+}
+
+i {
+font-style: italic;
+}
+
+img.float {
+display: inline;
+}
+
+em {
+font-style: italic;
+}
+
+span.arial {
+font-family: Arial;
+}
+
+span.hebrew {
+font-family: Times New Roman;
+}
+
+span.listItemBody {
+}
+
+span.listItemLabel {
+}
+
+i {
+font-style: italic;
+}
+
+i {
+font-style: italic;
+}
+
+span.zenoTXFontsize60 {
+}
+
+span.zenoTXFontsize80 {
+}
+
+sub {
+}
+
+sup {
+}
+
+span.zenoUnderline {
+text-decoration: underline;
+}
+

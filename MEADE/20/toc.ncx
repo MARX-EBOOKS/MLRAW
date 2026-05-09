@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="de">
+  <head>
+    <meta name="dtb:uid" content="id_102337"/>
+    <meta name="dtb:depth" content="9"/>
+    <meta name="dtb:totalPageCount" content="0"/>
+    <meta name="dtb:maxPageNumber" content="0"/>
+  </head>
+  <docTitle>
+    <text>Herrn Eugen Dührings Umwälzung der Wissenschaft</text>
+  </docTitle>
+  <navMap>
+<navPoint playOrder="1" id="np-1">
+<navLabel>
+<text>Titelseite</text>
+</navLabel>
+<content id="1" src="1.html"/>
+</navPoint>
+<navPoint playOrder="2" id="np-2">
+<navLabel>
+<text>Herrn Eugen Dührings Umwälzung der Wissenschaft</text>
+</navLabel>
+<content id="con-3" src="20009162666.html#an2000916264X"/>
+<navPoint playOrder="3" id="np-3">
+<navLabel>
+<text>Vorworte zu den drei Auflagen</text>
+</navLabel>
+<content id="con-4" src="20009162666.html#an20009162658"/>
+<navPoint playOrder="4" id="np-4">
+<navLabel>
+<text>I</text>
+</navLabel>
+<content id="con-5" src="20009162666.html"/>
+</navPoint>
+<navPoint playOrder="5" id="np-5">
+<navLabel>
+<text>II</text>
+</navLabel>
+<content id="con-6" src="20009162674.html"/>
+</navPoint>
+<navPoint playOrder="6" id="np-6">
+<navLabel>
+<text>III</text>
+</navLabel>
+<content id="con-7" src="20009162682.html"/>
+</navPoint>
+</navPoint>
+<navPoint playOrder="7" id="np-7">
+<navLabel>
+<text>Einleitung</text>
+</navLabel>
+<content id="con-8" src="20009162704.html#an20009162690"/>
+<navPoint playOrder="8" id="np-8">
+<navLabel>
+<text>I. Allgemeines</text>
+</navLabel>
+<content id="con-9" src="20009162704.html"/>
+</navPoint>
+<navPoint playOrder="9" id="np-9">
+<navLabel>
+<text>II. Was Herr Dühring verspricht</text>
+</navLabel>
+<content id="con-10" src="20009162712.html"/>
+</navPoint>
+</navPoint>
+<navPoint playOrder="10" id="np-10">
+<navLabel>
+<text>1. Abschnitt. Philosophie</text>
+</navLabel>
+<content id="con-11" src="20009162739.html#an20009162720"/>
+<navPoint playOrder="11" id="np-11">
+<navLabel>
+<text>III. Einteilung. Apriorismus</text>
+</navLabel>
+<content id="con-12" src="20009162739.html"/>
+</navPoint>
+<navPoint playOrder="12" id="np-12">
+<navLabel>
+<text>IV. Weltschematik</text>
+</navLabel>
+<content id="con-13" src="20009162747.html"/>
+</navPoint>
+<navPoint playOrder="13" id="np-13">
+<navLabel>
+<text>V. Naturphilosophie. Zeit und Raum</text>
+</navLabel>
+<content id="con-14" src="20009162755.html"/>
+</navPoint>
+<navPoint playOrder="14" id="np-14">
+<navLabel>
+<text>VI. Naturphilosophie. Kosmogonie, Physik, Chemie</text>
+</navLabel>
+<content id="con-15" src="20009162763.html"/>
+</navPoint>
+<navPoint playOrder="15" id="np-15">
+<navLabel>
+<text>VII. Naturphilosophie. Organische Welt</text>
+</navLabel>
+<content id="con-16" src="20009162771.html"/>
+</navPoint>
+<navPoint playOrder="16" id="np-16">
+<navLabel>
+<text>VIII. Naturphilosophie. Organische Welt (Schluß)</text>
+</navLabel>
+<content id="con-17" src="2000916278X.html"/>
+</navPoint>
+<navPoint playOrder="17" id="np-17">
+<navLabel>
+<text>IX. Moral und Recht. Ewige Wahrheiten</text>
+</navLabel>
+<content id="con-18" src="20009162798.html"/>
+</navPoint>
+<navPoint playOrder="18" id="np-18">
+<navLabel>
+<text>X. Moral und Recht. Gleichheit</text>
+</navLabel>
+<content id="con-19" src="20009162801.html"/>
+</navPoint>
+<navPoint playOrder="19" id="np-19">
+<navLabel>
+<text>XI. Moral und Recht. Freiheit und Notwendigkeit</text>
+</navLabel>
+<content id="con-20" src="2000916281X.html"/>
+</navPoint>
+<navPoint playOrder="20" id="np-20">
+<navLabel>
+<text>XII. Dialektik. Quantität und Qualität</text>
+</navLabel>
+<content id="con-21" src="20009162828.html"/>
+</navPoint>
+<navPoint playOrder="21" id="np-21">
+<navLabel>
+<text>XIII. Dialektik. Negation der Negation</text>
+</navLabel>
+<content id="con-22" src="20009162836.html"/>
+</navPoint>
+<navPoint playOrder="22" id="np-22">
+<navLabel>
+<text>XIV. Schluß</text>
+</navLabel>
+<content id="con-23" src="20009162844.html"/>
+</navPoint>
+</navPoint>
+<navPoint playOrder="23" id="np-23">
+<navLabel>
+<text>2. Abschnitt. Politische Ökonomie</text>
+</navLabel>
+<content id="con-24" src="20009162860.html#an20009162852"/>
+<navPoint playOrder="24" id="np-24">
+<navLabel>
+<text>I. Gegenstand und Methode</text>
+</navLabel>
+<content id="con-25" src="20009162860.html"/>
+</navPoint>
+<navPoint playOrder="25" id="np-25">
+<navLabel>
+<text>II. Gewaltstheorie</text>
+</navLabel>
+<content id="con-26" src="20009162879.html"/>
+</navPoint>
+<navPoint playOrder="26" id="np-26">
+<navLabel>
+<text>III. Gewaltstheorie (Fortsetzung)</text>
+</navLabel>
+<content id="con-27" src="20009162887.html"/>
+</navPoint>
+<navPoint playOrder="27" id="np-27">
+<navLabel>
+<text>IV. Gewaltstheorie (Schluß)</text>
+</navLabel>
+<content id="con-28" src="20009162895.html"/>
+</navPoint>
+<navPoint playOrder="28" id="np-28">
+<navLabel>
+<text>V. Werttheorie</text>
+</navLabel>
+<content id="con-29" src="20009162909.html"/>
+</navPoint>
+<navPoint playOrder="29" id="np-29">
+<navLabel>
+<text>VI. Einfache und zusammengesetzte Arbeit</text>
+</navLabel>
+<content id="con-30" src="20009162917.html"/>
+</navPoint>
+<navPoint playOrder="30" id="np-30">
+<navLabel>
+<text>VII. Kapital und Mehrwert</text>
+</navLabel>
+<content id="con-31" src="20009162925.html"/>
+</navPoint>
+<navPoint playOrder="31" id="np-31">
+<navLabel>
+<text>VIII. Kapital und Mehrwert (Schluß)</text>
+</navLabel>
+<content id="con-32" src="20009162933.html"/>
+</navPoint>
+<navPoint playOrder="32" id="np-32">
+<navLabel>
+<text>IX. Naturgesetze der Wirtschaft. Grundrente</text>
+</navLabel>
+<content id="con-33" src="20009162941.html"/>
+</navPoint>
+<navPoint playOrder="33" id="np-33">
+<navLabel>
+<text>X. Aus der »Kritischen Geschichte«</text>
+</navLabel>
+<content id="con-34" src="2000916295X.html"/>
+</navPoint>
+</navPoint>
+<navPoint playOrder="34" id="np-34">
+<navLabel>
+<text>3. Abschnitt. Sozialismus</text>
+</navLabel>
+<content id="con-35" src="20009162976.html#an20009162968"/>
+<navPoint playOrder="35" id="np-35">
+<navLabel>
+<text>I. Geschichtliches</text>
+</navLabel>
+<content id="con-36" src="20009162976.html"/>
+</navPoint>
+<navPoint playOrder="36" id="np-36">
+<navLabel>
+<text>II. Theoretisches</text>
+</navLabel>
+<content id="con-37" src="20009162984.html"/>
+</navPoint>
+<navPoint playOrder="37" id="np-37">
+<navLabel>
+<text>III. Produktion</text>
+</navLabel>
+<content id="con-38" src="20009162992.html"/>
+</navPoint>
+<navPoint playOrder="38" id="np-38">
+<navLabel>
+<text>IV. Verteilung</text>
+</navLabel>
+<content id="con-39" src="2000916300X.html"/>
+</navPoint>
+<navPoint playOrder="39" id="np-39">
+<navLabel>
+<text>V. Staat, Familie, Erziehung</text>
+</navLabel>
+<content id="con-40" src="20009163018.html"/>
+</navPoint>
+</navPoint>
+</navPoint>
+<navPoint playOrder="40" id="np-40">
+<navLabel>
+<text>Biographie</text>
+</navLabel>
+<content id="con-41" src="20009162615.html"/>
+</navPoint>
+<navPoint playOrder="41" id="np-41">
+<navLabel>
+<text>Impressum</text>
+</navLabel>
+<content id="2" src="2.html"/>
+</navPoint>
+  </navMap>
+</ncx>

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf" xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="dcidid">
+<metadata>
+  <dc:title>Dialektik der Natur</dc:title>
+  <dc:language xsi:type="dcterms:RFC3066">de</dc:language>
+  <dc:identifier id="dcidid">hof-102339</dc:identifier>
+  <dc:creator opf:role="aut">Friedrich Engels</dc:creator>
+  <dc:creator opf:role="bkp">Zeno.org</dc:creator>
+  <dc:publisher>Zeno.org</dc:publisher>
+  <dc:description></dc:description>
+  <dc:date>2015-06-29</dc:date>
+  <dc:source></dc:source>
+  <dc:rights></dc:rights>
+  <meta name="cover" content="cover.jpg"/>
+</metadata>
+<manifest>
+  <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+  <item id="icoverpage" href="0.html" media-type="application/xhtml+xml" />
+  <item id="i1" href="1.html" media-type="application/xhtml+xml" />
+  <item id="i20009163131" href="20009163131.html" media-type="application/xhtml+xml" />
+  <item id="i2000916314X" href="2000916314X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163166" href="20009163166.html" media-type="application/xhtml+xml" />
+  <item id="i20009163174" href="20009163174.html" media-type="application/xhtml+xml" />
+  <item id="i20009163182" href="20009163182.html" media-type="application/xhtml+xml" />
+  <item id="i20009163190" href="20009163190.html" media-type="application/xhtml+xml" />
+  <item id="i20009163204" href="20009163204.html" media-type="application/xhtml+xml" />
+  <item id="i20009163212" href="20009163212.html" media-type="application/xhtml+xml" />
+  <item id="i20009163220" href="20009163220.html" media-type="application/xhtml+xml" />
+  <item id="i20009163239" href="20009163239.html" media-type="application/xhtml+xml" />
+  <item id="i20009163247" href="20009163247.html" media-type="application/xhtml+xml" />
+  <item id="i20009163255" href="20009163255.html" media-type="application/xhtml+xml" />
+  <item id="i20009163271" href="20009163271.html" media-type="application/xhtml+xml" />
+  <item id="i2000916328X" href="2000916328X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163301" href="20009163301.html" media-type="application/xhtml+xml" />
+  <item id="i2000916331X" href="2000916331X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163328" href="20009163328.html" media-type="application/xhtml+xml" />
+  <item id="i20009163336" href="20009163336.html" media-type="application/xhtml+xml" />
+  <item id="i20009163344" href="20009163344.html" media-type="application/xhtml+xml" />
+  <item id="i20009163352" href="20009163352.html" media-type="application/xhtml+xml" />
+  <item id="i20009163360" href="20009163360.html" media-type="application/xhtml+xml" />
+  <item id="i20009163379" href="20009163379.html" media-type="application/xhtml+xml" />
+  <item id="i20009163387" href="20009163387.html" media-type="application/xhtml+xml" />
+  <item id="i20009162615" href="20009162615.html" media-type="application/xhtml+xml" />
+  <item id="i2" href="2.html" media-type="application/xhtml+xml" />
+  <item id="iimage27" href="meaw_241.jpg" media-type="image/jpeg" />
+  <item id="iimage28" href="meaw_242.jpg" media-type="image/jpeg" />
+  <item id="iimage29" href="meaw_243.jpg" media-type="image/jpeg" />
+  <item id="iimage30" href="meaw_244.jpg" media-type="image/jpeg" />
+  <item id="ipt" href="page-template.xpgt" media-type="application/vnd.adobe-page-template+xml" />
+  <item id="icss" href="epub.css" media-type="text/css" />
+  <item id="cover.jpg" href="cover.jpg" media-type="image/jpeg" />
+</manifest>
+<spine toc="ncx">
+  <itemref idref="icoverpage" />
+  <itemref idref="i1" />
+  <itemref idref="i20009163131" />
+  <itemref idref="i2000916314X" />
+  <itemref idref="i20009163166" />
+  <itemref idref="i20009163174" />
+  <itemref idref="i20009163182" />
+  <itemref idref="i20009163190" />
+  <itemref idref="i20009163204" />
+  <itemref idref="i20009163212" />
+  <itemref idref="i20009163220" />
+  <itemref idref="i20009163239" />
+  <itemref idref="i20009163247" />
+  <itemref idref="i20009163255" />
+  <itemref idref="i20009163271" />
+  <itemref idref="i2000916328X" />
+  <itemref idref="i20009163301" />
+  <itemref idref="i2000916331X" />
+  <itemref idref="i20009163328" />
+  <itemref idref="i20009163336" />
+  <itemref idref="i20009163344" />
+  <itemref idref="i20009163352" />
+  <itemref idref="i20009163360" />
+  <itemref idref="i20009163379" />
+  <itemref idref="i20009163387" />
+  <itemref idref="i20009162615" />
+  <itemref idref="i2" />
+</spine>
+</package>

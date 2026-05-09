@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf" xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="dcidid">
+<metadata>
+  <dc:title>Herrn Eugen Dührings Umwälzung der Wissenschaft</dc:title>
+  <dc:language xsi:type="dcterms:RFC3066">de</dc:language>
+  <dc:identifier id="dcidid">hof-102337</dc:identifier>
+  <dc:creator opf:role="aut">Friedrich Engels</dc:creator>
+  <dc:creator opf:role="bkp">Zeno.org</dc:creator>
+  <dc:publisher>Zeno.org</dc:publisher>
+  <dc:description></dc:description>
+  <dc:date>2015-06-29</dc:date>
+  <dc:source></dc:source>
+  <dc:rights></dc:rights>
+  <meta name="cover" content="cover.jpg"/>
+</metadata>
+<manifest>
+  <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+  <item id="icoverpage" href="0.html" media-type="application/xhtml+xml" />
+  <item id="i1" href="1.html" media-type="application/xhtml+xml" />
+  <item id="i20009162666" href="20009162666.html" media-type="application/xhtml+xml" />
+  <item id="i20009162674" href="20009162674.html" media-type="application/xhtml+xml" />
+  <item id="i20009162682" href="20009162682.html" media-type="application/xhtml+xml" />
+  <item id="i20009162704" href="20009162704.html" media-type="application/xhtml+xml" />
+  <item id="i20009162712" href="20009162712.html" media-type="application/xhtml+xml" />
+  <item id="i20009162739" href="20009162739.html" media-type="application/xhtml+xml" />
+  <item id="i20009162747" href="20009162747.html" media-type="application/xhtml+xml" />
+  <item id="i20009162755" href="20009162755.html" media-type="application/xhtml+xml" />
+  <item id="i20009162763" href="20009162763.html" media-type="application/xhtml+xml" />
+  <item id="i20009162771" href="20009162771.html" media-type="application/xhtml+xml" />
+  <item id="i2000916278X" href="2000916278X.html" media-type="application/xhtml+xml" />
+  <item id="i20009162798" href="20009162798.html" media-type="application/xhtml+xml" />
+  <item id="i20009162801" href="20009162801.html" media-type="application/xhtml+xml" />
+  <item id="i2000916281X" href="2000916281X.html" media-type="application/xhtml+xml" />
+  <item id="i20009162828" href="20009162828.html" media-type="application/xhtml+xml" />
+  <item id="i20009162836" href="20009162836.html" media-type="application/xhtml+xml" />
+  <item id="i20009162844" href="20009162844.html" media-type="application/xhtml+xml" />
+  <item id="i20009162860" href="20009162860.html" media-type="application/xhtml+xml" />
+  <item id="i20009162879" href="20009162879.html" media-type="application/xhtml+xml" />
+  <item id="i20009162887" href="20009162887.html" media-type="application/xhtml+xml" />
+  <item id="i20009162895" href="20009162895.html" media-type="application/xhtml+xml" />
+  <item id="i20009162909" href="20009162909.html" media-type="application/xhtml+xml" />
+  <item id="i20009162917" href="20009162917.html" media-type="application/xhtml+xml" />
+  <item id="i20009162925" href="20009162925.html" media-type="application/xhtml+xml" />
+  <item id="i20009162933" href="20009162933.html" media-type="application/xhtml+xml" />
+  <item id="i20009162941" href="20009162941.html" media-type="application/xhtml+xml" />
+  <item id="i2000916295X" href="2000916295X.html" media-type="application/xhtml+xml" />
+  <item id="i20009162976" href="20009162976.html" media-type="application/xhtml+xml" />
+  <item id="i20009162984" href="20009162984.html" media-type="application/xhtml+xml" />
+  <item id="i20009162992" href="20009162992.html" media-type="application/xhtml+xml" />
+  <item id="i2000916300X" href="2000916300X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163018" href="20009163018.html" media-type="application/xhtml+xml" />
+  <item id="i20009162615" href="20009162615.html" media-type="application/xhtml+xml" />
+  <item id="i2" href="2.html" media-type="application/xhtml+xml" />
+  <item id="ipt" href="page-template.xpgt" media-type="application/vnd.adobe-page-template+xml" />
+  <item id="icss" href="epub.css" media-type="text/css" />
+  <item id="cover.jpg" href="cover.jpg" media-type="image/jpeg" />
+</manifest>
+<spine toc="ncx">
+  <itemref idref="icoverpage" />
+  <itemref idref="i1" />
+  <itemref idref="i20009162666" />
+  <itemref idref="i20009162674" />
+  <itemref idref="i20009162682" />
+  <itemref idref="i20009162704" />
+  <itemref idref="i20009162712" />
+  <itemref idref="i20009162739" />
+  <itemref idref="i20009162747" />
+  <itemref idref="i20009162755" />
+  <itemref idref="i20009162763" />
+  <itemref idref="i20009162771" />
+  <itemref idref="i2000916278X" />
+  <itemref idref="i20009162798" />
+  <itemref idref="i20009162801" />
+  <itemref idref="i2000916281X" />
+  <itemref idref="i20009162828" />
+  <itemref idref="i20009162836" />
+  <itemref idref="i20009162844" />
+  <itemref idref="i20009162860" />
+  <itemref idref="i20009162879" />
+  <itemref idref="i20009162887" />
+  <itemref idref="i20009162895" />
+  <itemref idref="i20009162909" />
+  <itemref idref="i20009162917" />
+  <itemref idref="i20009162925" />
+  <itemref idref="i20009162933" />
+  <itemref idref="i20009162941" />
+  <itemref idref="i2000916295X" />
+  <itemref idref="i20009162976" />
+  <itemref idref="i20009162984" />
+  <itemref idref="i20009162992" />
+  <itemref idref="i2000916300X" />
+  <itemref idref="i20009163018" />
+  <itemref idref="i20009162615" />
+  <itemref idref="i2" />
+</spine>
+</package>

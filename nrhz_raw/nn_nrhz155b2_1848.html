@@ -1,0 +1,235 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html lang="de" xml:lang="de" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>DTA</title>
+<meta content="text/html; charset=utf-8" http-equiv="content-type"/>
+<style type="text/css">
+    #xsltext { position:relative; font-size:14pt; margin-left:200px; font-family:Georgia,serif; max-width:50em }
+    #xsltext hr { color:#666; background:#666; width:15em }
+    .page    { margin:20px }
+    .pagenum { color:#aaa; font-size:.9em }
+  .small { font-size:8pt }
+.head  { text-align:center; font-size:1.2em; margin-top:1em }
+.dta-head  { text-align:center; font-size:1.2em; margin-bottom:.5em }
+
+.fw-top          { text-align:center; margin-bottom:2em; color:#666 }
+
+
+/* .fw-pageNum      { display:none }*/
+.fw-pageNum { text-align:center; color:#666; font-size:.8em }
+.fw-bottom-sig   { margin-top:1em; font-size:.8em; color:#666 }
+.fw-bottom-catch { text-align:right; margin-top:1em; margin-right:1em; font-size:.8em; color:#666 }
+
+/* quote mess */
+blockquote:before, blockquote:after, q:before, q:after {
+    /* see http://www.paulchaplin.com/blog/css-reset-and-quirky-quotes */
+    content:"";
+    content:none;
+}
+
+/* place holders */
+.ph, .phbl { color:#666 }
+.phbl      { display:block; text-align:center }
+
+.titlepage  { text-align:center }
+.byline     { font-size:.9em; margin:1em 0 }
+.dta-anzeige { color:#aaa }
+/*.dta-dateline { margin-top:1em; text-align:right; margin-right:2em }*/
+.dedication { padding-left:2em }
+.footnotesep{ border-top:1px solid #333; margin-bottom:5px; width:10em }
+.footnotesep-long{ border-top:1px solid #333; margin-bottom:5px; width:80% }
+.footnote   { color:#333; font-size:.8em; margin-top:.5em }
+.endnote    { color:#333; font-size:.8em; margin-top:.5em; margin-bottom:.5em }
+.endnote-indent { text-indent:1em }
+.fn-intext  { vertical-align:super; font-size:.8em }
+
+.dta-argument { text-align:center; font-size:.9em }
+
+/*
+.dta-marginal       { position:absolute; width:140px; text-indent:0; background:#fff; padding:0 4px; border:1px solid #D1C5A4; font-size:smaller; z-index:10000 }
+.dta-marginal-left  { left:-150px; text-align:right }
+.dta-marginal-right { right:-150px; text-align:left }
+*/
+
+.dta-cb { font-size:.8em; color:#666; text-align:center; display:block; margin:5px }
+
+.poem       { padding-left:2em; margin-bottom:1em }
+.dta-salute { margin-top:1em; display:inline }
+.speaker    { font-weight:bold }
+.stage      { font-style:italic; font-size:.9em }
+.stage .c   { font-style:italic; font-size:.9em }
+div.stage   { margin-bottom:.5em }
+
+/*.dta-lg     { margin-bottom:1em }*/
+
+div.dta-figure { font-size:.9em; margin-top:1em; margin-bottom:1em }
+div.dta-figure p { margin-left:1em; display:inline }
+.dta-figure img { /*width:50%; height:auto*/ }
+
+.titlepart           { font-size:1em }
+.titlepart-main      { margin-bottom:1em; font-size:1.6em }
+.titlepart-volume    { font-size:1em }
+.titlepart-edition   { font-size:1em }
+.titlepart-copyright { font-size:1em }
+.titlepart-desc      { font-size:1em }
+.titlepart-sub       { font-size:1.3em; margin-bottom:.5em }
+
+.docauthor { font-size:1em; margin-bottom:.5em }
+
+.gap       { color:#666 }
+
+.dta-foreign { color:#666 }
+.dta-foreign:before { content:"[" }
+.dta-foreign:after { content:"]" }
+
+.dta-corr { border-bottom:dotted 2px #97002d }
+.dta-reg  { border-bottom:dotted 2px #2d9700 }
+.dta-abbr { border-bottom:dotted 2px #002D97 }
+.dta-supplied { color:#2D9700 }
+
+/* dramae */
+.dta-sp { margin-bottom:1em }
+.dta-in-sp { display:inline; /*margin-left:.5em*/ }
+.dta-actor { float:right }
+
+/* lb @n */
+.dta-lb-n { float:right }
+
+/* renditions inline */
+.aq    { font-family:Verdana,sans-serif; /*font-size:1em*/ }
+.rom   { font-family:Verdana,sans-serif; font-size:1em } /* mpi dlc compatibility */
+.b     { font-weight:bold }
+.blue  { color:#475784 }
+.cap   { text-transform:capitalize }
+.cw    { text-align:right }
+.down  { vertical-align:sub; font-size:.7em }
+.f     { font-family:Times,serif; border:1px dotted silver }
+.fr    { }
+.sub   { vertical-align:sub; font-size:.7em }
+.g     { letter-spacing:0.125em; font-feature-settings: "liga" 0 }
+.g:before { content:''; margin-left:0.125em }
+.g:after  { content:''; margin-right:0em }
+.i     { font-style:italic }
+/*.in    { float:left; font-size:350%; line-height:1; margin-right:5px; margin-top:0px }*/
+.in    { font-size:150%; /*margin-left:-3px*/ }
+.k     { font-variant:small-caps }
+.red   { color:#BC4C49 }
+
+/*.s     { text-decoration: line-through }*/
+.s { font-size:.8em }
+
+.u     { text-decoration:underline }
+.up,.sup, .fn-sign { vertical-align:super; font-size:.8em }
+.uu    { border-bottom:double 3px #000 }
+
+/* vertical text */
+.v { color:#fff; background:#FF00FF }
+
+.dta-rend { background:url(images/stripes.png) }
+
+ /* renditions block */
+.c     { display:block; text-align:center }
+.et    { display:block; margin-left:2em; text-indent:0 }
+.et1   { display:block; margin-left:4em; text-indent:0 }
+.et2   { display:block; margin-left:6em; text-indent:0 }
+.et3   { display:block; margin-left:8em; text-indent:0 }
+.dta-in-sp .et { display:inline; text-indent:2em }
+.right { display:block; text-align:right }
+
+/* cast lists */
+table.dta-castgroup { border-collapse:collapse; border-spacing:0; margin:0; width:100% }
+td.castitem     { border-right:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px }
+.castitem       { margin-bottom:5px }
+td.roledesc     { vertical-align:middle; padding-left:5px }
+
+/* tables */    
+.dta-table      { margin-top:0; margin-left:auto; margin-right:auto; background:#fff; border-collapse:collapse }
+.dta-table td   { vertical-align:top; border:1px solid #ccc; padding:3px }
+caption h1,
+caption h2,
+caption h3,
+caption h4,
+caption h5,
+caption h6 { font-size:1em; white-space:nowrap; padding-bottom:5px }
+
+/* lists */
+ul.dta { list-style-type:none; padding-left:2em }
+ul.dta li { margin-bottom:3px }
+
+.dta-bibl { font-size:.9em }
+
+.dta-columntext { white-space:normal }
+.dta-columntext td { padding-left:10px; padding-right:2em }
+/*.dta-columntext td:nth-child(2n+1) { border-right:1px solid #666 }*/
+
+table.list          { border-collapse:collapse; border-spacing:0; margin:0 }
+td.item-right       { border-left:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px; padding-left:2em }
+td.item-left        { border-right:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px; padding-left:2em }
+td.dta-list-trailer { vertical-align:middle; padding-left:5px; text-indent:0 !important }
+td.dta-list-head    { vertical-align:middle; padding-right:2em }
+.dta-list           { padding-left:2em; margin-bottom:1em }
+.dta-list-item      { text-indent:-1em; margin-bottom:.5em }
+.dta-list-item-noindent { text-indent:0em; margin-bottom:.5em !important }
+.dta-list-item table { text-indent:0em }
+
+.dta-listbibl       { margin-left:2em }
+.dta-listbibl > br { display:none }
+.dta-listbibl .dta-bibl { display:block; margin-bottom:10px; text-indent:-1em }
+
+/* all things brace ... */
+.braced-base       { display:inline-block; /*text-align:center;*/ vertical-align:middle; padding:0 5px 0 5px }
+p .braced-base     {text-indent:0 !important}
+.braced-left-right { border-left:1px solid #333; border-right:1px solid #333; margin-left:1em }
+.braced-left { border-left:1px solid #333; margin-left:1em }
+.braced-right { border-right:1px solid #333 }
+.braced-base .dta-list-item { text-indent:0; margin-bottom:0 }
+
+
+.publication li { margin-bottom:.3em }
+
+.dtabf-change { margin-bottom:20px }
+.dtabf-change-head { font-size:1.3em; font-family:Vollkorn,verdana; color:#827B66; font-weight:normal; font-style:italic; margin:0; padding:0 }
+
+/*.bf-toc    { font-size:.9em }
+.bf-toc p  { font-weight:bold; padding-top:20px }
+.bf-toc ul { list-style-type:none; padding:10px; background:#FFFEF9 }
+.bf-toc li { margin-bottom:10px }*/
+
+
+#xsltext h1 { font-size:1.8em }
+#xsltext h2 { font-size:1.6em }
+#xsltext h3 { font-size:1.4em }
+#xsltext h4 { font-size:1.3em }
+#xsltext h5 { font-size:1.2em }
+#xsltext h6 { font-size:1.1em }
+
+.fw-top, .fw-bottom-sig { opacity:.5 }
+
+p.dta-p { text-indent:2em }
+.dta-sp p { text-indent:0 !important }
+.dta-p-in-sp-really { padding-top:10px }
+.speaker    { font-weight:bold }
+.speaker *  { }
+.stage      { font-style:italic }
+.fr         { font-size:1.1em }
+.dta-salute { text-indent:10em }
+.dta-closer { text-align:right; margin-right:10em }
+.dta-lg     { margin-bottom:10px; margin-top:0 !important; margin-left:2em }
+.footnotesep, .footnotesep-long { margin-top:15px }
+p           { margin-bottom:10px; margin-top:0 !important }
+.dta-figure { opacity:.5 }
+
+.dta-marginal       { position:absolute; width:140px; text-indent:0; background:#fff; padding:0 4px; border:1px solid #D1C5A4; font-size:smaller; z-index:10000 }
+.dta-marginal-left  { left:-150px; text-align:right }
+.dta-marginal-right { right:-150px; text-align:left }
+  </style>
+</head>
+<body>
+<div id="xsltext">
+<div class="page"><div class="pagenum">|<a href="http://www.deutschestextarchiv.de/nn_nrhz155b2_1848/1">0001 : 0823</a>|</div>
+<div class="dta-front"><div class="titlepage"><div class="titlepart titlepart-main">Extra-Blatt zu Nr. 155 der Neuen Rheinischen Zeitung.</div><div class="titlepart titlepart-sub">Organ der Demokratie.</div>                             Mittwoch, den 29. November.                       </div> </div><div class="dta-body"><div class="">Deutschland.      <div class="jArticle" id="ar155b2_001_c"><sup><span onclick="$('.id1').toggle()" style="font-style:italic;color:blue;cursor:pointer" title="editorische Anmerkung"><img src="images/Comments-icon.png"/></span></sup><span class="id1" style="display:none;border:1px solid #ccc;background:yellow;font-size:10pt;padding:2px">Edition: <span class="dta-bibl">Karl Marx: Geöffnete Briefe, vorgesehen für: MEGA<span class="sup">2</span>, I/8.         </span> </span> <span class="dta-bibl">                      *                   </span> Köln, 28. Nov., 11 Uhr Abends.                <div class="gap" style="margin:15px">Der Inhalt dieses Artikels kann aus urheberrechtlichen Gründen nicht angezeigt werden.</div> </div><div class="jArticle" id="ar155b2_002"><span class="dta-bibl">                      103                   </span> Berlin, 27. November.                <p class="dta-p"><span class="g">Neues Attentat gegen die Abgeordneten. Offizieller Diebstahl</span>. Es war heute Mittag kurz vor 12 Uhr. Im Hotel Mylius waren 60-70 Abgeordnete von der äußersten Linken beim Frühstück im freundschaftlichen Gespräch versammelt, als plötzlich der Major <span class="g">Graf Blumenthal</span> mit seinen Garden in den Saal dringt und im Namen des Gesetzes die Versammelten auffordert das Lokal zu verlassen. Als man den Major befragte, auf Grund welches Gesetzes man sich entfernen solle, und ihm begreiflich machte, daß kein Gesetz existirt, welches sein Verlangen motivire, erklärt der Major, daß er von der höchsten Gewalt den Auftrag habe, die in diesem Saale Anwesenden mit Gewalt zu vertreiben. Auf dem Tische lagen stenographische Berichte und lithographirte Korrespondenzen, welche der Major wegnehmen wollte. <span class="g">Jacoby</span> sagte dem Major, daß er die Wegnahme der Druckschriften für einen <span class="g">Raub</span> ansehen müsse; der Major erwiederte daß er Alles, was er finde, confisciren würde. Als <span class="g">Jacoby</span> wenigstens ein Verzeichniß von dem was der Major confiscirt, aufnehmen wollte, entriß ihm der Major die Schriften und übergab sie einem Soldaten. <span class="g">Jacoby</span> sagte dem Major: fahren Sie nur mit Ihrem Raube fort und verhöhnen Sie alle Gesetze, auch Sie werden einst zur Verantwortung gezogen werden.</p><p class="dta-p">Hierauf ließ der Major die anwesenden Abgeordneten, welche den Saal nicht verlassen wollten, mit Gewalt hinaustreiben. Vor der Thür des Hauses standen ungefähr 300 Mann Garden mit geladenen Gewehren, welche eine Menge Menschen herbeilockten, die nur Zeuge der willkürlichen Vertreibung der Abgeordneten waren. Dem Wirth des Hotels, welcher zu dem versammelten Volke heraustrat und sich bitter über diese Gewaltthat beschwerte, indem man seine Gäste vertreibe und allen Gesetzen Hohn spreche, sagte ein junger Lieutenant, wenn er nicht augenblicklich ruhig sei, würde er ihn verhaften lassen, da er <span class="g">aufrührische Reden</span> führe. Obgleich der Wirth nicht schwieg, kam es doch nicht zur Verhaftung, da der Major Befehl zum Abzug gab. Trotzdem sich mehrere hunderte Menschen versammelt hatten, was gegen die Verordnungen des Belagerungszustandes verstößt, wonach nur 20 Menschen auf der Straße zusammenbleiben sollen, bekümmerte sich der tapfere Major <span class="g">Graf Blumenthal</span> nicht darum, er hatte ja seine Heldenthat ausgeführt und 60 Abgeordnete, die Vertreter des Volks, im Namen der bewaffneten Dummheit und des souveränen Schnurrbarts aus einem Privatzimmer vertrieben. — Dieses freche Auftreten der Soldatenherrschaft hat wieder eine allgemeine Erbitterung hervorgerufen. Das Maaß der Staatsstreiche füllt sich, es wird bald überlaufen. —</p><p class="dta-p">Nachmittags 3 1/2 Uhr, als eben mehrere Abgeordnete im Hotel Mylius zu Mittag speis'ten, wiederholte sich die obige Scene, mit der Veränderung, daß sich der Offizier zurückzog, als man ihn fragte, ob man nicht mehr ungestört speisen dürfe. Einen Abgeordneten, welcher die Aeußerung machte: „Diese Tyrannei geht doch zu weit!“ wollte der Offiizier sogar verhaften.</p><p class="dta-p">Auch bei Mielentz, wo die Fraktion Rodbertus-Berg ihre Zusammenkünfte hält, fand heute ein ähnlicher Vorfall statt. Die anwesenden Abgeordneten wurden aus den Restaurationszimmern vertrieben.</p><p class="dta-p">Die Reaktion benutzt diese Vorfälle und verbreitet in der Stadt das Gerücht von einer entdeckten republikanischen Verschwörung, die von der Partei Mylius angestellt sei. Die konfiszirten Papiere sollen die nöthigen Aufschlüsse gegeben haben. Lächerlich, eine Verschwörung bei offenen Thüren, mit <span class="g">gedruckten</span> geheimen Papieren.</p><p class="dta-p"><span class="g">Die Republik kommt, aber ihr Prophet ist Wrangel-Brandenburg</span>.</p> </div><div class="jArticle" id="ar155b2_003"><span class="dta-bibl">                      103                   </span> Klub Brüneck im Dom zu Brandenburg.                <p class="dta-p">Erste Sitzung am 27. November. — Unter dem Schutze zweier Bataillone Infanterie, zweier Schwadronen Kavallerie und vier Kanonen, welche auf dem Marktplatz aufgestellt sind, versammelten sich heute Vormittag die am 9. d. M. aus der Sitzung der Nationalversammlung davongelaufenen Abgeordneten von der rechten Seite. Auch sieht man einige dreißig vom Centrum und rechten Centrum, welche bis zum 15. d. M. den Sitzungen der Nationalversammlung hier beiwohnten.</p><p class="dta-p">Um 10 1/2 Uhr erschienen die Minister und <span class="g">Brandenburg</span> erhebt sich und erklärt, daß er die am 9. d. M. in Berlin vertagte Nationalversammlung wieder eröffne. Er ersucht die Versammlung, sich zu konstituiren, da er eine <span class="g">königliche Botschaft</span> mitzutheilen habe. Man möge den Ministern Anzeige davon machen, wenn die Versammlung konstituirt sei. — Hierauf entfernen sich die Minister und da der Präsidentenstuhl und die Sekretärsitze leer geblieben, ruft man von mehrern Seiten: <span class="g">v. Brüneck</span> möge als Alters-Präsident den Vorsitz übernehmen. Dies geschieht, und die Sekretäre <span class="g">Geßler</span> und <span class="g">v. Borries</span> (von der rechten Seite) übernehmen ihre frühere Stellung wieder.</p><p class="dta-p">Nachdem <span class="g">Brüneck</span> etwas quatsches Zeug gesprochen, daß er vor 65 Jahren hier in Brandenburg geboren sei, und dergleichen Persönlichkeiten, verlangen Mehrere den Namensaufruf. Ehe man jedoch dazu kommt, stürmen Mehrere nach der Tribüne, verlesen Proteste u. s. w. Alles in größter Unordnung. Kein Mensch bittet um's Wort. Alles schreit durcheinander wie in einer Kinderstube.</p><p class="dta-p"><span class="g">Kühlwetter</span> verliest ein Schreiben Hansemann's, worin er sich entschuldigt, Krankheits halber heute nicht erscheinen zu können, hoffentlich wird ihm dies in den nächsten Tagen möglich sein. (Der Schlaue, er will abwarten, wie es kommt.)</p><p class="dta-p"><span class="g">Dahne</span> übergiebt einen Protest, welcher von mehreren Andern unterschrieben ist, worin sie erklären, daß sie der Krone nicht das Recht zugestehen, die Nationalversammlung zu vertagen, zu verlegen oder aufzulösen, daß sie in Folge dessen auch so lange den Berathungen der Nationalversammlung in Berlin beigewohnt, bis sie durch Bajonnette auseinandergetrieben worden, halten sich aber für verpflichtet, sich hier in Brandenburg einzufinden, um eine Ausgleichung des entstandenen Konflikts zu bewirken.</p><p class="dta-p">Mehrere andere Proteste in ähnlichem Sinne von Fleischer, Köhler, Zachariä u. A., im Ganzen etwa von 30 Abgeordneten, welche den letzten Sitzungen in Berlin beiwohnten, schließen sich dem erstern an.</p><p class="dta-p"><span class="g">Reichensperger</span> und <span class="g">Baumstark</span> bedauern diesen Widerspruch. Riedel hingegen donnert gegen diejenigen, welche protestiren und diejenigen, welche sich nicht hierher verfügten, weil sie sich dadurch eines Vergehens gegen die Gesetze des Staates schuldig machen.</p><p class="dta-p">Die Herausforderung, welche in der Rede Riedels lag, bringt bei den protestirenden Mitgliedern eine große Aufregung hervor, welche Bauer aus Berlin zu beschwichtigen sucht, indem er <span class="g">den Schluß der Debatte</span> beantragt. Dies erregt auf den Tribünen, wo sich mehrere Hundert Neugierige aus Berlin eingefunden hatten, allgemeine Heiterkeit. Niemand hatte die Sitzung für eröffnet erklärt. Es lag kein Antrag vor, worüber man hätte debattiren können, wenn man das müßige unparlamentarische Geschwätz Mehrerer nicht so nennen will; dennoch verlangt Bauer den Schluß der Debatte.</p><p class="dta-p">Endlich verlangt man von mehreren Seiten, daß der Vorsitzende die Anzahl der Anwesenden verkündige. Brüneck berichtet nach langem Zögern, daß 154 anwesend seien.</p>
+</div></div></div>
+</div><div class="page"><div class="pagenum">|<a href="http://www.deutschestextarchiv.de/nn_nrhz155b2_1848/2">0002 : 0824</a>|</div><div class="dta-body"><div class=""><div class="jArticle" id="ar155b2_003"><p class="dta-p"><span class="g">Reichensperger</span> erklärt hierauf: wir sind hier die National-Versammlung; da wir aber nicht beschlußfähig sind, so können wir keine gültigen Beschlüsse fassen.</p><p class="dta-p"><span class="g">Brüneck</span> vertagt die Sitzung eine halbe Stunde, um dem Ministerium Anzeige zu machen.</p><p class="dta-p">Als die Gesellschaft wieder zusammen ist, harrt man lange vergebens auf das Erscheinen der Minister. Die Gesellschaft langweilt sich. — Endlich bringt ein Huissier ein Schreiben des Ministers.</p><p class="dta-p"><span class="g">Brüneck</span> besieht es 10 Minuten lang von allen Seiten und theilt endlich den Versammelten mit, daß die Minister erklären, da die Versammlung nicht beschlußfähig sei, müßten sie zuvor dem Könige darüber Vortrag halten und ersuchen die Versammlung, morgen Vormittag 9 Uhr zur Anhörung einer kgl. Botschaft sich wieder zu versammeln.</p><p class="dta-p">Von mehreren Seiten ruft man, wir wollen uns erst um 11 Uhr morgen versammeln, nicht um 9 Uhr und dabei bleibts. Die Gesellschaft wollte zeigen, daß sie ihre Launen hat und nicht unbedingt Ordre parirt.</p><p class="dta-p">Nachträglich muß noch bemerkt werden, daß sich unter den 154 Anwesenden mehrere befanden, deren Wahlen noch gar nicht geprüft sind und die sehr zweifelhaft sein sollen. Auch viele unglücklichen Stellvertreter, wie v. d. Heydt, befanden sich hier, deren Patrone in Berlin tagen. Eine beschlußfähige Anzahl zu Brandenburg ist eine Utopie.</p> </div><div class="jArticle" id="ar155b2_004"><span class="dta-bibl">                      *                   </span> Münster, 27. November.                <p class="dta-p">Das von reaktionären Militärbehörden im Bunde mit gleichgesinnten Bureaukraten aus <span class="g">Minden</span> herbeigezogene Bataillon vom 15er Regiment hat, wie es wahrscheinlich beabsichtigt war, zu einem ernstlichen Kampf zwischen Volk und Militär geführt. Arbeiter, mit Aexten, Hämmern etc. bewaffnet, haben den 15ern derb westphälisch geantwortet. Es giebt mehrere Todte und noch mehr Verwundete unter den 15ern. Die Erbitterung des Volkes über den feigen Anfall Seitens der 15ner ist furchtbar. Details morgen.</p> </div><div class="jArticle" id="ar155b2_005">Koblenz, 27. Nov.                <p class="dta-p">Aus Andernach erfahren wir, daß der dortige Krawall durch die daselbst stehende Kompagnie der reitenden Artillerie entstanden sei. Dieselbe habe eine <span class="g">Katze</span> erschossen und deren Leichenbegängniß den Bürgern von Andernach angezeigt, und zwar durch gedruckte Zettel. Hierin habe die Bürgerschaft das, was es auch gewesen sein mag, nämlich eine Parodie auf die an mehreren Orten Deutschlands begangene Leichenfeier zu Ehren Blum's, erblickt, worauf eine große Masse Menschen unter Toben und Schreien und dem Rufe nach Waffen vor der Kaserne sich eingefunden hatte. Eiligst wurde Infanterie von Koblenz dahin beordert, bei deren Eintreffen die Ruhe wieder hergestellt wurde.</p><p class="dta-p"><span class="dta-bibl">(Rh.- u. M.- Z.)</span></p> </div><div class="jArticle" id="ar155b2_006"><span class="dta-bibl">                      *                   </span> Berncastel, 26. Novbr.                <p class="dta-p">Heute früh wollte man Herrn Coblenz, der zum Führer des Landsturmes erwählt worden war, verhaften. Das Volk widersetzte sich, die Sturmglocken wurden geläutet, Schaaren Bewaffneter aus der Umgegend zogen herbri und die Schergen mußten auf die gehoffte Beute verzichten. Aus Trier kommt, wie eben das Gerücht umgeht, ebenfalls bewaffneter Zuzug. Der Landrath und der Regierungskommissär Bolz (Advokat und Landwehrlieutenant) sind arg durchgeprügelt worden.</p> </div> </div><div class="">Französische Republik.             <div class="jArticle" id="ar155b2_007"><span class="dta-bibl">                      *                   </span> Paris, 27. November.                <p class="dta-p">(<span class="g">Flucht des Papstes</span>.) In Paris ist am 26. November Abends ein ausserordentlicher Kurier eingetroffen, welcher Rom am 19. November verließ und dem französischen Kabinet die Nachricht brachte, daß der Papst aus Rom geflohen sei.</p><p class="dta-p"><span class="dta-bibl">(Univers.)</span></p> </div> </div><div class="">[Deutschland]             <div class="jArticle" id="ar155b2_008"><span class="dta-bibl">                      *                   </span> Köln, 28. Nov.                <p class="dta-p">Ist der Advokat v. <span class="g">Hontheim</span>, derselbe, der sich bei Gelegenheit der Entwerfung des demokratischen Programms für Frankfurt durch eine Perfidie unmöglich gemacht hatte, der Redakteur en chef der „<span class="g">Rheinischen Volkshalle</span>“, die Windischgrätz zum <span class="g">Morde Robert Blums gratulirt? Hr. v. Hontheim</span>, als Taubmann des hiesigen Barreau's, scheint speziell für diesen Posten geeignet. (<span class="g">Taubmann</span> war Doctor subtilissimus zu Dresden und zugleich Hofnarr des Königs von Sachsen, Augustus).</p> </div> </div><div class="corrigenda"><p class="dta-p"><span class="b">Druckfehler.</span></p><p class="dta-p">In der Beilage zu Nr. 155 „Neueste Nachrichten“ soll es statt: „so geht so eben ein <span class="g">fest</span> verbürgtes“ heißen: „ein <span class="g">fast</span> verbürgtes Gerücht.“</p> </div><div class="imprint"><p class="dta-p">Der Gerant: <span class="g">Korff</span>.<br/>Druck von J. W. <span class="g">Dietz,</span> unter Hutmacher Nr. 17.</p> </div>
+</div>
+</div></div></body></html>

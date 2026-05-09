@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf" xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="dcidid">
+<metadata>
+  <dc:title>Zur Urgeschichte der Deutschen</dc:title>
+  <dc:language xsi:type="dcterms:RFC3066">de</dc:language>
+  <dc:identifier id="dcidid">hof-102343</dc:identifier>
+  <dc:creator opf:role="aut">Friedrich Engels</dc:creator>
+  <dc:creator opf:role="bkp">Zeno.org</dc:creator>
+  <dc:publisher>Zeno.org</dc:publisher>
+  <dc:description></dc:description>
+  <dc:date>2015-06-29</dc:date>
+  <dc:source></dc:source>
+  <dc:rights></dc:rights>
+  <meta name="cover" content="cover.jpg"/>
+</metadata>
+<manifest>
+  <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+  <item id="icoverpage" href="0.html" media-type="application/xhtml+xml" />
+  <item id="i1" href="1.html" media-type="application/xhtml+xml" />
+  <item id="i2000916362X" href="2000916362X.html" media-type="application/xhtml+xml" />
+  <item id="i20009163638" href="20009163638.html" media-type="application/xhtml+xml" />
+  <item id="i20009163646" href="20009163646.html" media-type="application/xhtml+xml" />
+  <item id="i20009163654" href="20009163654.html" media-type="application/xhtml+xml" />
+  <item id="i20009162615" href="20009162615.html" media-type="application/xhtml+xml" />
+  <item id="i2" href="2.html" media-type="application/xhtml+xml" />
+  <item id="ipt" href="page-template.xpgt" media-type="application/vnd.adobe-page-template+xml" />
+  <item id="icss" href="epub.css" media-type="text/css" />
+  <item id="cover.jpg" href="cover.jpg" media-type="image/jpeg" />
+</manifest>
+<spine toc="ncx">
+  <itemref idref="icoverpage" />
+  <itemref idref="i1" />
+  <itemref idref="i2000916362X" />
+  <itemref idref="i20009163638" />
+  <itemref idref="i20009163646" />
+  <itemref idref="i20009163654" />
+  <itemref idref="i20009162615" />
+  <itemref idref="i2" />
+</spine>
+</package>

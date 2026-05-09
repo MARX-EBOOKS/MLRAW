@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="de" lang="de">
+<head>
+  <title>DTA</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+  <style type="text/css">
+    #xsltext { position:relative; font-size:14pt; margin-left:200px; font-family:Georgia,serif; max-width:50em }
+    #xsltext hr { color:#666; background:#666; width:15em }
+    .page    { margin:20px }
+    .pagenum { color:#aaa; font-size:.9em }
+  .small { font-size:8pt }
+.head  { text-align:center; font-size:1.2em; margin-top:1em }
+.dta-head  { text-align:center; font-size:1.2em; margin-bottom:.5em }
+
+.fw-top          { text-align:center; margin-bottom:2em; color:#666 }
+
+
+/* .fw-pageNum      { display:none }*/
+.fw-pageNum { text-align:center; color:#666; font-size:.8em }
+.fw-bottom-sig   { margin-top:1em; font-size:.8em; color:#666 }
+.fw-bottom-catch { text-align:right; margin-top:1em; margin-right:1em; font-size:.8em; color:#666 }
+
+/* quote mess */
+blockquote:before, blockquote:after, q:before, q:after {
+    /* see http://www.paulchaplin.com/blog/css-reset-and-quirky-quotes */
+    content:"";
+    content:none;
+}
+
+/* place holders */
+.ph, .phbl { color:#666 }
+.phbl      { display:block; text-align:center }
+
+.titlepage  { text-align:center }
+.byline     { font-size:.9em; margin:1em 0 }
+.dta-anzeige { color:#aaa }
+/*.dta-dateline { margin-top:1em; text-align:right; margin-right:2em }*/
+.dedication { padding-left:2em }
+.footnotesep{ border-top:1px solid #333; margin-bottom:5px; width:10em }
+.footnotesep-long{ border-top:1px solid #333; margin-bottom:5px; width:80% }
+.footnote   { color:#333; font-size:.8em; margin-top:.5em }
+.endnote    { color:#333; font-size:.8em; margin-top:.5em; margin-bottom:.5em }
+.endnote-indent { text-indent:1em }
+.fn-intext  { vertical-align:super; font-size:.8em }
+
+.dta-argument { text-align:center; font-size:.9em }
+
+/*
+.dta-marginal       { position:absolute; width:140px; text-indent:0; background:#fff; padding:0 4px; border:1px solid #D1C5A4; font-size:smaller; z-index:10000 }
+.dta-marginal-left  { left:-150px; text-align:right }
+.dta-marginal-right { right:-150px; text-align:left }
+*/
+
+.dta-cb { font-size:.8em; color:#666; text-align:center; display:block; margin:5px }
+
+.poem       { padding-left:2em; margin-bottom:1em }
+.dta-salute { margin-top:1em; display:inline }
+.speaker    { font-weight:bold }
+.stage      { font-style:italic; font-size:.9em }
+.stage .c   { font-style:italic; font-size:.9em }
+div.stage   { margin-bottom:.5em }
+
+/*.dta-lg     { margin-bottom:1em }*/
+
+div.dta-figure { font-size:.9em; margin-top:1em; margin-bottom:1em }
+div.dta-figure p { margin-left:1em; display:inline }
+.dta-figure img { /*width:50%; height:auto*/ }
+
+.titlepart           { font-size:1em }
+.titlepart-main      { margin-bottom:1em; font-size:1.6em }
+.titlepart-volume    { font-size:1em }
+.titlepart-edition   { font-size:1em }
+.titlepart-copyright { font-size:1em }
+.titlepart-desc      { font-size:1em }
+.titlepart-sub       { font-size:1.3em; margin-bottom:.5em }
+
+.docauthor { font-size:1em; margin-bottom:.5em }
+
+.gap       { color:#666 }
+
+.dta-foreign { color:#666 }
+.dta-foreign:before { content:"[" }
+.dta-foreign:after { content:"]" }
+
+.dta-corr { border-bottom:dotted 2px #97002d }
+.dta-reg  { border-bottom:dotted 2px #2d9700 }
+.dta-abbr { border-bottom:dotted 2px #002D97 }
+.dta-supplied { color:#2D9700 }
+
+/* dramae */
+.dta-sp { margin-bottom:1em }
+.dta-in-sp { display:inline; /*margin-left:.5em*/ }
+.dta-actor { float:right }
+
+/* lb @n */
+.dta-lb-n { float:right }
+
+/* renditions inline */
+.aq    { font-family:Verdana,sans-serif; /*font-size:1em*/ }
+.rom   { font-family:Verdana,sans-serif; font-size:1em } /* mpi dlc compatibility */
+.b     { font-weight:bold }
+.blue  { color:#475784 }
+.cap   { text-transform:capitalize }
+.cw    { text-align:right }
+.down  { vertical-align:sub; font-size:.7em }
+.f     { font-family:Times,serif; border:1px dotted silver }
+.fr    { }
+.sub   { vertical-align:sub; font-size:.7em }
+.g     { letter-spacing:0.125em; font-feature-settings: "liga" 0 }
+.g:before { content:''; margin-left:0.125em }
+.g:after  { content:''; margin-right:0em }
+.i     { font-style:italic }
+/*.in    { float:left; font-size:350%; line-height:1; margin-right:5px; margin-top:0px }*/
+.in    { font-size:150%; /*margin-left:-3px*/ }
+.k     { font-variant:small-caps }
+.red   { color:#BC4C49 }
+
+/*.s     { text-decoration: line-through }*/
+.s { font-size:.8em }
+
+.u     { text-decoration:underline }
+.up,.sup, .fn-sign { vertical-align:super; font-size:.8em }
+.uu    { border-bottom:double 3px #000 }
+
+/* vertical text */
+.v { color:#fff; background:#FF00FF }
+
+.dta-rend { background:url(images/stripes.png) }
+
+ /* renditions block */
+.c     { display:block; text-align:center }
+.et    { display:block; margin-left:2em; text-indent:0 }
+.et1   { display:block; margin-left:4em; text-indent:0 }
+.et2   { display:block; margin-left:6em; text-indent:0 }
+.et3   { display:block; margin-left:8em; text-indent:0 }
+.dta-in-sp .et { display:inline; text-indent:2em }
+.right { display:block; text-align:right }
+
+/* cast lists */
+table.dta-castgroup { border-collapse:collapse; border-spacing:0; margin:0; width:100% }
+td.castitem     { border-right:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px }
+.castitem       { margin-bottom:5px }
+td.roledesc     { vertical-align:middle; padding-left:5px }
+
+/* tables */    
+.dta-table      { margin-top:0; margin-left:auto; margin-right:auto; background:#fff; border-collapse:collapse }
+.dta-table td   { vertical-align:top; border:1px solid #ccc; padding:3px }
+caption h1,
+caption h2,
+caption h3,
+caption h4,
+caption h5,
+caption h6 { font-size:1em; white-space:nowrap; padding-bottom:5px }
+
+/* lists */
+ul.dta { list-style-type:none; padding-left:2em }
+ul.dta li { margin-bottom:3px }
+
+.dta-bibl { font-size:.9em }
+
+.dta-columntext { white-space:normal }
+.dta-columntext td { padding-left:10px; padding-right:2em }
+/*.dta-columntext td:nth-child(2n+1) { border-right:1px solid #666 }*/
+
+table.list          { border-collapse:collapse; border-spacing:0; margin:0 }
+td.item-right       { border-left:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px; padding-left:2em }
+td.item-left        { border-right:1px solid #333; padding-right:10px; padding-left:0; padding-bottom:5px; padding-left:2em }
+td.dta-list-trailer { vertical-align:middle; padding-left:5px; text-indent:0 !important }
+td.dta-list-head    { vertical-align:middle; padding-right:2em }
+.dta-list           { padding-left:2em; margin-bottom:1em }
+.dta-list-item      { text-indent:-1em; margin-bottom:.5em }
+.dta-list-item-noindent { text-indent:0em; margin-bottom:.5em !important }
+.dta-list-item table { text-indent:0em }
+
+.dta-listbibl       { margin-left:2em }
+.dta-listbibl > br { display:none }
+.dta-listbibl .dta-bibl { display:block; margin-bottom:10px; text-indent:-1em }
+
+/* all things brace ... */
+.braced-base       { display:inline-block; /*text-align:center;*/ vertical-align:middle; padding:0 5px 0 5px }
+p .braced-base     {text-indent:0 !important}
+.braced-left-right { border-left:1px solid #333; border-right:1px solid #333; margin-left:1em }
+.braced-left { border-left:1px solid #333; margin-left:1em }
+.braced-right { border-right:1px solid #333 }
+.braced-base .dta-list-item { text-indent:0; margin-bottom:0 }
+
+
+.publication li { margin-bottom:.3em }
+
+.dtabf-change { margin-bottom:20px }
+.dtabf-change-head { font-size:1.3em; font-family:Vollkorn,verdana; color:#827B66; font-weight:normal; font-style:italic; margin:0; padding:0 }
+
+/*.bf-toc    { font-size:.9em }
+.bf-toc p  { font-weight:bold; padding-top:20px }
+.bf-toc ul { list-style-type:none; padding:10px; background:#FFFEF9 }
+.bf-toc li { margin-bottom:10px }*/
+
+
+#xsltext h1 { font-size:1.8em }
+#xsltext h2 { font-size:1.6em }
+#xsltext h3 { font-size:1.4em }
+#xsltext h4 { font-size:1.3em }
+#xsltext h5 { font-size:1.2em }
+#xsltext h6 { font-size:1.1em }
+
+.fw-top, .fw-bottom-sig { opacity:.5 }
+
+p.dta-p { text-indent:2em }
+.dta-sp p { text-indent:0 !important }
+.dta-p-in-sp-really { padding-top:10px }
+.speaker    { font-weight:bold }
+.speaker *  { }
+.stage      { font-style:italic }
+.fr         { font-size:1.1em }
+.dta-salute { text-indent:10em }
+.dta-closer { text-align:right; margin-right:10em }
+.dta-lg     { margin-bottom:10px; margin-top:0 !important; margin-left:2em }
+.footnotesep, .footnotesep-long { margin-top:15px }
+p           { margin-bottom:10px; margin-top:0 !important }
+.dta-figure { opacity:.5 }
+
+.dta-marginal       { position:absolute; width:140px; text-indent:0; background:#fff; padding:0 4px; border:1px solid #D1C5A4; font-size:smaller; z-index:10000 }
+.dta-marginal-left  { left:-150px; text-align:right }
+.dta-marginal-right { right:-150px; text-align:left }
+  </style>
+</head>
+<body>
+<div id="xsltext">
+<div class="page"><div class="pagenum">|<a href="http://www.deutschestextarchiv.de/nn_nrhz134b_1848/1">0001 : 0681</a>|</div>
+<div class="dta-front"><div class="titlepage"><div class="titlepart titlepart-main">Extra-Beilage zu Nr. 134 der Neuen Rheinischen Zeitung.</div><div class="titlepart titlepart-sub">Organ der Demokratie.</div>          </div>       </div><div class="dta-body"><div class="  ">[Deutschland]             <div class="jArticle  " id="ar134b_001"><span class="
+      dta-bibl
+       ">                      36                   </span> Berlin, 2. November.                Neueste Nachricht aus Wien, mitgetheilt aus einem Privatbriefe, und in Plakaten so eben in der ganzen Stadt verbreitet.                Florisdorf, 31. Okt. Abends 8 Uhr.
+<p class="dta-p">Die Nachricht von der Uebergabe Wiens ist ungegründet. Der Fürst Windischgrätz ließ durch Telegraphen nach allen Seiten falsche Nachrichten von der Uebergabe verbreiten, um sich des Zuzuges zu erwehren. Er unterhandelte. Am 30. Abends griffen ihn aber die Ungarn an, er mußte zurück, um sich mit ihnen zu schlagen. Ein Flügel der Ungarn wurde zurückgeworfen; als aber Windischgrätz am 31. zur Stadt hineinwollte, fand er sie abermals verbarrikadirt. Die Stadt erklärte, sie habe die Anträge zerrissen, sie ergebe sich nicht, sie nehme kein Anerbieten mehr an. In Folge dessen begann er ein neues Bombardement, das in 2 Absätzen bis zum 31. Abends währte ‒ da soll es an Munition gefehlt haben. Die Lebensmittel fehlten, es waren seit 3 Tagen keine Lebensmittel vorhanden, die Armee war im Gedränge zwischen den Ungarn und Wien. Die Stadtverwaltung von Prag hat erklärt, daß sie die Einwohner nicht mehr von einer Erklärung für Wien zurückhalten könne. Auf der ganzen Tour von Wien bis Ockerberg ist das Land für Wien im Aufstande. Sogar in Olmütz zeigen sich Unruhen.</p>             </div><div class="jArticle  " id="ar134b_002"><span class="
+      dta-bibl
+       ">                      103                   </span> Berlin, 2. November. Abends 7 Uhr.
+<p class="dta-p">Die National-Versammlung hat sich permanent erklärt.</p><p class="dta-p">Seit heute Morgen 9 Uhr ist die Versammlung mit Ausnahme zweier Stunden, wo sie sich in ihre Parteiversammlungen zurückzog permanent gewesen. Zum ersten Male seitdem diese Versammlung hier tagt, hat sie sich heute ihres Ursprunges der Revolution des 18. März würdig bewiesen. Sie will kein reaktionäres Ministerium. Wenn wir auch dem Grafen Brandenburg nicht gradezu unser Mißtrauen beweisen können, so genügt das doch nicht ihn mit der Bildung eines Ministeriums zu beauftragen. <span class="g ">Ein Ministerpräsident muß das Vertrauen des ganzen Landes und der Majorität dieser Versammlung besitzen,</span> wenn Ruhe Ordnung und Vertrauen wiederkehren sollen. Diese Worte sprach ein Mitglied des linken Centrums unter allgemeinem Beifall. Und so hat die Versammlung auch gehandelt, indem sie dem Könige in der fast einstimmig angenommenen Adresse das Mißtrauen gegen ein ferneres reaktionäres Ministerium zu erkennen giebt. ‒ Obgleich der Antrag der äußersten Linken auf Niedersetzung einer Kommission, nicht durchging, so ist doch der angenommene Antrag des linken Centrums in der That dasselbe; der erste Antrag hatte nur einen energischen, mehr konventartigen Anstrich. Da auch der Antrag auf Permanenz der Sitzung bis nach der Rückkehr der Deputation von der schwankenden Linken ausging, so ist sie in der That eben so weit wie die äußerste Linke und die Uebereinstimmung in diesem wichtigen Moment zwischen den beiden Theilen der Linken ist gesichert und dadurch die Majorität auf ihrer Seite. Da das linke Centrum auch mit der Linken stimmt, so ist ihr immer eine Majorität von 60-70 Stimmen gewiß, wie wir das heute und vorgestern gesehen haben.</p><p class="dta-p">Die ganze Stadt blickt nun erwartungsvoll auf die National-Versammlung. Das Volk erkennt den wichtigen Augenblick und verhält sich ganz ruhig. Die Klubs sind gefüllt, und die Redner bereiten das Volk auf die Dinge vor, die uns erwarten, wenn der König sich weigert auf das Verlangen der National-Versammlung einzugehen. Nur ein Ministerium in welches die äußerste Linke durch <span class="g ">Waldeck</span> vertreten ist, wird Vertrauen im Volke gewinnen. Wenn sich die heute verbreiteten Nachrichten aus Wien bestätigen, daß die Ungarn die Generale Windischgrätz und Jellachich völlig in die Flucht geschlagen haben und Wien befreit ist, so wird der König nachgeben und ein Ministerium <span class="g ">Waldeck-Rodbertus,</span> letzterer Name ist fatal, ernennen. Ist aber die Sache in Wien noch zweifelhaft oder unterliegt Wien, so können wir uns auch hier auf einen Kampf à mort mit der Kontrerevolution gefaßt machen.</p>             </div><div class="jArticle  " id="ar134b_003"><span class="
+      dta-bibl
+       ">                      135                   </span> Berlin, 2. November.                <p class="dta-p">Die Reaktion scheint losbrechen zu wollen. Heute lesen wir an den Straßenecken ein Manifest, unterzeichnet Eichmann, worin derselbe, sich berufend auf einen §. des neuen Bürgerwehrgesetzes, mit der Aufbietung der bewaffneten militärischen Macht droht, wenn die Bürgerwehr nicht sofort solchen Exzessen entgegentreten könne, wie sie am Abende des 31. beim Schauspielhause vorgekommen seien. Es sollen nämlich einige Mitglieder der Rechten mißhandelt sein, andere aus Angst während der ganzen Nacht im Keller des Schauspielhauses gesessen haben. Das Manifest hat große Unruhe in dem Volke Berlins erregt. Sofort ist eine Deputation an Rimpler abgegangen, um ihn zu fragen, was er zu thun gedenke. Die National-Versammlung hat einen Antrag von</p></div></div></div>
+</div><div class="page"><div class="pagenum">|<a href="http://www.deutschestextarchiv.de/nn_nrhz134b_1848/2">0002 : 0682</a>|</div><div class="dta-body"><div class="  "><div class="jArticle  " id="ar134b_003"><div class="dta-continued-paragraph"><p>Waldeck auf Permanenz abgelehnt, über einen andern von Rodbertus „eine Deputation an den König zu schicken, und gegen das Ministerium Brandenburg zu protestiren“, wird augenblicklich abgestimmt. Denn das Ministerium Pfuel hat seine Abdankung eingereicht, und der General Brandenburg ist mit der Bildung eines neuen Ministeriums beauftragt. Eine Kommission von 25 soll nach diesem Antrage des Centrums eine Adresse an den König entwerfen, worin die Lage des Landes dargestellt, und die Unmöglichkeit eines Ministeriums Brandenburg unter diesen Umständen bewiesen werden soll. Alle Chancen für einen Kampf sind somit vorhanden ‒ es verlautet, schon heute werde der Belagerungszustand erklärt werden und dann ‒ die Würfel werden fallen.</p></div><p class="dta-p">Der Antrag Rodbertus-Berg ist soeben angenommen und es wird eine Kommission erwählt zur Abfassung der Adresse. Auf eine Stunde vertagt sich die Kammer. Dann wird die Deputation mit der Adresse an den König abgeschickt, und die Nationalversammlung wird bis zur Zurückkunft derselben permanent bleiben.</p>             </div>          </div><div class="  ">[Französische Republik]             <div class="jArticle  " id="ar134b_004"><span class="
+      dta-bibl
+       ">                      108                   </span> Paris, 1. Nov.                <p class="dta-p">Was ich Ihnen neulich über die feindselige Stimmung zwischen der Linie und den Mobilen schrieb, beginnt bereits durch die That bestätigt zu werden. Vorgestern und gestern Abend fand zwischen diesen Truppentheilen an der Barriere Rochechouard ein blutiger Kampf Statt. Alle Versuche der Offiziere, die Streitenden zu trennen, waren vergebens. Die Linien-Soldaten rannten in ihre Kasernen, um Waffen und Beistand herbeizuholen. An die Barriere zurückgekommen, riefen sie: A bas Cavaignac! A bas la garde mobile! Vive la république dèmocratique et sociale! Die Arbeiter sehen dem Kampfe zu, ohne für einen der Streitenden Partei zu nehmen. Heute ist der Garde mobile der Besuch der Barriere Rochechouard verboten worden.</p>             </div>          </div><div class="  ">Handels-Nachrichten.             <span class="gap">[irrelevantes Material]</span>             <p class="dta-p">Das Leben der Völker ist der Tod der Börse!</p>           </div><div class="imprint  "><p class="dta-p">Der Gerant: Korff.<br />Druck von J. W. Dietz, unter Hutmacher Nr. 17.</p>          </div>
+</div>      
+</div></div></body></html>
