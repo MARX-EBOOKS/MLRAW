@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MEW HTML Editor</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <strong>MEW HTML Editor</strong>
+    <span id="fileName">No file open</span>
+    <details id="fileMenu" class="menu">
+      <summary>File</summary>
+      <div class="menuPanel">
+        <button id="saveBtn" title="Save current file">Save</button>
+        <button id="saveAllBtn" title="Save all open files">Save all</button>
+        <button id="undoBtn" title="Undo last edit">Undo</button>
+        <button id="redoBtn" title="Redo last undone edit">Redo</button>
+      </div>
+    </details>
+    <button id="darkBtn" title="Toggle dark mode">Dark</button>
+    <label title="When on, single keys insert tags instead of typing letters"><input id="instant" type="checkbox"> instant keys</label>
+    <span id="status"></span>
+    <span class="topActions">
+      <button id="newWinBtn" title="Open current file in a new editor window">New window</button>
+      <button id="closeSavedBtn" title="Close all saved windows">Close saved</button>
+      <button id="closeAllBtn" title="Close all open windows">Close all</button>
+      <button id="fullBtn" title="Toggle fullscreen">Fullscreen</button>
+    </span>
+  </header>
+  <main>
+    <aside>
+      <input id="treeFilter" placeholder="filter files">
+      <div id="rootPath"></div>
+      <div id="tree"></div>
+    </aside>
+    <section class="editorPane">
+      <div class="bar"><span id="tagBar"></span></div>
+      <div id="tabs" class="tabs" aria-label="Open files"></div>
+      <div class="findbar">
+        <input id="findText" placeholder="find regex or text">
+        <input id="replaceText" placeholder="replace text">
+        <label><input id="regexBox" type="checkbox" checked> regex</label>
+        <label><input id="caseBox" type="checkbox"> case</label>
+        <button id="findBtn">Find</button>
+        <button id="nextBtn">Next</button>
+        <button id="replaceBtn">Replace</button>
+        <button id="allBtn">All</button>
+        <span id="findInfo"></span>
+      </div>
+      <div class="editorWrap">
+        <pre id="highlight" aria-hidden="true"></pre>
+        <textarea id="editor" spellcheck="false" placeholder="Open an HTML file from the left column."></textarea>
+      </div>
+    </section>
+    <section class="previewPane">
+      <div class="bar">
+        <strong>Preview</strong>
+        <button id="refreshBtn">Refresh</button>
+        <button id="openRawBtn">Open file</button>
+      </div>
+      <iframe id="preview" sandbox="allow-same-origin"></iframe>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
