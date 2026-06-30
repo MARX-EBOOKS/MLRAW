@@ -1,0 +1,244 @@
+{
+    "name":  "mew-html-tag-bar",
+    "displayName":  "MEW HTML Tag Bar",
+    "description":  "A compact VS Code tag bar for inserting MEW HTML tags into the active editor.",
+    "version":  "1.0.0",
+    "private":  true,
+    "type":  "module",
+    "engines":  {
+                    "vscode":  "^1.85.0"
+                },
+    "categories":  [
+                       "Other"
+                   ],
+    "main":  "./extension.cjs",
+    "contributes":  {
+                        "commands":  [
+                                         {
+                                             "command":  "mewTags.showBar",
+                                             "title":  "MEW Tags: Show Tag Bar",
+                                             "icon":  "media/tag.svg"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.b",
+                                             "title":  "MEW Tags: Insert Bold"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.i",
+                                             "title":  "MEW Tags: Insert Italic"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.em",
+                                             "title":  "MEW Tags: Insert Emphasis"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.q",
+                                             "title":  "MEW Tags: Insert Blockquote"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.a",
+                                             "title":  "MEW Tags: Insert Anchor"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.x",
+                                             "title":  "MEW Tags: Insert ID Anchor"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.l",
+                                             "title":  "MEW Tags: Insert HREF Anchor"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.f",
+                                             "title":  "MEW Tags: Insert Footnote"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.r",
+                                             "title":  "MEW Tags: Insert Right Paragraph"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.c",
+                                             "title":  "MEW Tags: Insert Center Paragraph"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h1",
+                                             "title":  "MEW Tags: Insert H1"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h2",
+                                             "title":  "MEW Tags: Insert H2"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h3",
+                                             "title":  "MEW Tags: Insert H3"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h4",
+                                             "title":  "MEW Tags: Insert H4"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h5",
+                                             "title":  "MEW Tags: Insert H5"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.h6",
+                                             "title":  "MEW Tags: Insert H6"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.p",
+                                             "title":  "MEW Tags: Insert Paragraph"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.br",
+                                             "title":  "MEW Tags: Insert BR"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.div",
+                                             "title":  "MEW Tags: Insert DIV"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.span",
+                                             "title":  "MEW Tags: Insert SPAN"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.idAttr",
+                                             "title":  "MEW Tags: Insert ID Attribute"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.classAttr",
+                                             "title":  "MEW Tags: Insert Class Attribute"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.styleAttr",
+                                             "title":  "MEW Tags: Insert style Attribute"
+                                         }
+                                     ],
+                        "viewsContainers":  {
+                                                "panel":  [
+                                                              {
+                                                                  "id":  "mewTags",
+                                                                  "title":  "HTML Tags",
+                                                                  "icon":  "media/tag.svg"
+                                                              }
+                                                          ]
+                                            },
+                        "views":  {
+                                      "mewTags":  [
+                                                      {
+                                                          "type":  "webview",
+                                                          "id":  "mewTags.bar",
+                                                          "name":  "Tag Bar",
+                                                          "visibility":  "visible"
+                                                      }
+                                                  ]
+                                  },
+                        "keybindings":  [
+                                            {
+                                                "command":  "mewTags.insert.b",
+                                                "key":  "alt+b",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.i",
+                                                "key":  "alt+i",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.q",
+                                                "key":  "alt+q",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.a",
+                                                "key":  "alt+a",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.x",
+                                                "key":  "alt+x",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.l",
+                                                "key":  "alt+l",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.f",
+                                                "key":  "alt+f",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.r",
+                                                "key":  "alt+r",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.c",
+                                                "key":  "alt+c",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h1",
+                                                "key":  "alt+1",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h2",
+                                                "key":  "alt+2",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h3",
+                                                "key":  "alt+3",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h4",
+                                                "key":  "alt+4",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h5",
+                                                "key":  "alt+5",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.h6",
+                                                "key":  "alt+6",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.p",
+                                                "key":  "alt+p",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.br",
+                                                "key":  "alt+enter",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.div",
+                                                "key":  "alt+d",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.insert.span",
+                                                "key":  "alt+s",
+                                                "when":  "editorTextFocus"
+                                            }
+                                        ],
+                        "menus":  {
+                                      "editor/title":  [
+                                                           {
+                                                               "command":  "mewTags.showBar",
+                                                               "group":  "navigation@1"
+                                                           }
+                                                       ]
+                                  }
+                    },
+    "scripts":  {
+                    "start":  "node server.js",
+                    "check":  "node --check extension.cjs"
+                }
+}
