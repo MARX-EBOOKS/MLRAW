@@ -110,6 +110,10 @@
                                          {
                                              "command":  "mewTags.insert.styleAttr",
                                              "title":  "MEW Tags: Insert style Attribute"
+                                         },
+                                         {
+                                             "command":  "mewTags.insert.noIndentAttr",
+                                             "title":  "MEW Tags: Insert No-Indent Attribute"
                                          }
                                      ],
                         "viewsContainers":  {

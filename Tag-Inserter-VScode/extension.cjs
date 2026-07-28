@@ -11,6 +11,7 @@ const tags = [
   { id: "f", label: "FN", open: "<sup><a href=\"\" id=\"\">", close: "</a></sup>", title: "Alt+F" },
   { id: "r", label: "R", open: "<p align=\"right\">", close: "</p>", title: "Alt+R" },
   { id: "c", label: "C", open: "<p align=\"center\">", close: "</p>", title: "Alt+C" },
+  { id: "ltgt", label: "&lt;&gt;", open: "&lt;", close: "&gt;", title: "Insert angle bracket" },
   { id: "h1", label: "H1", open: "<h1>", close: "</h1>", title: "Alt+1" },
   { id: "h2", label: "H2", open: "<h2>", close: "</h2>", title: "Alt+2" },
   { id: "h3", label: "H3", open: "<h3>", close: "</h3>", title: "Alt+3" },
@@ -20,15 +21,19 @@ const tags = [
   { id: "p", label: "P", open: "<p>", close: "</p>", title: "Alt+P" },
   { id: "br", label: "BR", open: "<br>\n", close: "", title: "Alt+Enter" },
   { id: "div", label: "DIV", open: "<div>", close: "</div>", title: "Alt+D" },
+  { id: "sup", label: "SUP", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
+  { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" },
   { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" }
 ];
 
 const attrs = [
   { id: "idAttr", label: "ID=", text: " id=\"\"", cursorOffset: 5, title: "Insert id attribute" },
-  { id: "classAttr", label: "CLASS=", text: " class=\"\"", cursorOffset: 8, title: "Insert class attribute" }, 
-  { id: "styleAttr", label: "STYLE=", text: " style=\"\"", cursorOffset: 8, title: "Insert style attribute" }
+  { id: "classAttr", label: "CLASS=", text: " class=\"\"", cursorOffset: 8, title: "Insert class attribute" },
+  { id: "styleAttr", label: "STYLE=", text: " style=\"\"", cursorOffset: 8, title: "Insert style attribute" },
+  { id: "noIndentAttr", label: "无缩进", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" }
 ];
 const replaceableBlockIds = new Set(["p", "r", "c", "h1", "h2", "h3", "h4", "h5", "h6", "div"]);
+const removableInlineIds = new Set(["b", "i", "em"]);
 
 
 let lastEditor;
@@ -98,111 +103,92 @@ async function insertTag(tag) {
 function buildTagOperation(document, fullText, selection, tag) {
   const start = document.offsetAt(selection.start);
   const end = document.offsetAt(selection.end);
-  const selected = fullText.slice(start, end);
-
-  if (replaceableBlockIds.has(tag.id)) {
-    const block = findReplaceableBlock(fullText, start, end);
-    if (block) {
-      return blockKindForTag(tag) === blockKindForOpenTag(block.open.token)
-        ? removeBlockOperation(fullText, start, end, block)
-        : replaceBlockOperation(fullText, start, end, tag, block);
-    }
-  }
-
-  if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
-    const inner = selected.slice(tag.open.length, selected.length - tag.close.length);
-    return { start, end, text: inner, selectStart: 0, selectEnd: inner.length };
-  }
-
-  const beforeStart = start - tag.open.length;
-  const afterEnd = end + tag.close.length;
-  const before = tag.close && beforeStart >= 0 ? fullText.slice(beforeStart, start) : "";
-  const after = tag.close && afterEnd <= fullText.length ? fullText.slice(end, afterEnd) : "";
-  if (tag.close && before === tag.open && after === tag.close) {
-    return { start: beforeStart, end: afterEnd, text: selected, selectStart: 0, selectEnd: selected.length };
-  }
-
-  const text = tag.open + selected + tag.close;
-  const emptyAttribute = tag.open.indexOf('=""');
-  const cursor = emptyAttribute >= 0
-    ? emptyAttribute + 2
-    : selected ? text.length : tag.open.length;
-  return { start, end, text, selectStart: cursor, selectEnd: cursor };
+  const deletion = deleteTagOperation(fullText, start, end, tag);
+  return deletion.operation || insertTagOperation(fullText, start, end, tag, deletion.block);
 }
 
-function findReplaceableBlock(fullText, selectionStart, selectionEnd) {
-  const tagPattern = /<\/?(?:p|h[1-6]|div)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi;
-  const stack = [];
-  const candidates = [];
-  let match;
+function deleteTagOperation(fullText, start, end, tag) {
+  const selected = fullText.slice(start, end);
+  const names = removableInlineIds.has(tag.id) ? tag.id
+    : replaceableBlockIds.has(tag.id) ? "p|h[1-6]|div" : "";
+  const stack = [], candidates = [];
 
-  while ((match = tagPattern.exec(fullText))) {
-    const token = match[0];
-    const nameMatch = token.match(/^<\/?(p|h[1-6]|div)\b/i);
-    if (!nameMatch) continue;
-
-    const name = nameMatch[1].toLowerCase();
-    const isClosing = /^<\//.test(token);
-    if (!isClosing && !/\/\s*>$/.test(token)) {
-      stack.push({ name, token, start: match.index, end: tagPattern.lastIndex });
-      continue;
+  if (names) {
+    const pattern = new RegExp(`<\\/?(?:${names})\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, "gi");
+    let match;
+    while ((match = pattern.exec(fullText))) {
+      const token = match[0];
+      const name = token.match(/^<\/?([^\s>]+)/)[1].toLowerCase();
+      if (!/^<\//.test(token) && !/\/\s*>$/.test(token)) {
+        stack.push({ name, token, start: match.index, end: pattern.lastIndex });
+      } else if (/^<\//.test(token)) {
+        const openIndex = replaceableBlockIds.has(tag.id) ? stack.length - 1
+          : stack.map(item => item.name).lastIndexOf(name);
+        if (openIndex < 0) continue;
+        const open = stack.splice(openIndex, 1)[0];
+        const close = { start: match.index, end: pattern.lastIndex };
+        if ((open.end <= start && end <= close.start) || (open.start === start && close.end === end)) {
+          candidates.push({ open, close });
+        }
+      }
     }
-    if (!isClosing) continue;
-
-    const open = stack.pop();
-    if (!open) continue;
-    const close = { name, token, start: match.index, end: tagPattern.lastIndex };
-    const containsContent = open.end <= selectionStart && selectionEnd <= close.start;
-    const selectsWholeBlock = open.start === selectionStart && close.end === selectionEnd;
-    if (containsContent || selectsWholeBlock) candidates.push({ open, close });
   }
 
-  return candidates.sort((a, b) =>
+  const enclosing = candidates.sort((a, b) =>
     (a.close.end - a.open.start) - (b.close.end - b.open.start)
   )[0];
+  if (enclosing && replaceableBlockIds.has(tag.id)) {
+    const name = enclosing.open.name;
+    const align = (enclosing.open.token.match(/\balign\s*=\s*["']?(center|right)/i)?.[1] || "").toLowerCase();
+    const currentId = name === "p" && align ? (align === "center" ? "c" : "r") : name;
+    if (currentId !== tag.id) return { operation: null, block: enclosing };
+  }
+
+  if (enclosing) {
+    const inner = fullText.slice(enclosing.open.end, enclosing.close.start);
+    const whole = start === enclosing.open.start && end === enclosing.close.end;
+    return { operation: {
+      start: enclosing.open.start,
+      end: enclosing.close.end,
+      text: inner,
+      selectStart: whole ? 0 : start - enclosing.open.end,
+      selectEnd: whole ? inner.length : end - enclosing.open.end
+    }, block: null };
+  }
+  if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
+    const inner = selected.slice(tag.open.length, selected.length - tag.close.length);
+    return { operation: { start, end, text: inner, selectStart: 0, selectEnd: inner.length }, block: null };
+  }
+  const beforeStart = start - tag.open.length;
+  const afterEnd = end + tag.close.length;
+  if (tag.close && beforeStart >= 0 && afterEnd <= fullText.length &&
+      fullText.slice(beforeStart, start) === tag.open && fullText.slice(end, afterEnd) === tag.close) {
+    return { operation: {
+      start: beforeStart, end: afterEnd, text: selected,
+      selectStart: 0, selectEnd: selected.length
+    }, block: null };
+  }
+  return { operation: null, block: null };
 }
 
-function blockKindForTag(tag) {
-  return tag.id;
-}
+function insertTagOperation(fullText, start, end, tag, block) {
+  const selected = fullText.slice(start, end);
+  if (!block) {
+    const text = tag.open + selected + tag.close;
+    const emptyAttribute = tag.open.indexOf('=""');
+    const cursor = emptyAttribute >= 0 ? emptyAttribute + 2
+      : selected ? text.length : tag.open.length;
+    return { start, end, text, selectStart: cursor, selectEnd: cursor };
+  }
 
-function blockKindForOpenTag(openTag) {
-  const nameMatch = openTag.match(/^<(p|h[1-6]|div)\b/i);
-  if (!nameMatch) return "";
-  const name = nameMatch[1].toLowerCase();
-  if (name !== "p") return name;
-
-  const alignMatch = openTag.match(/\balign\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
-  const align = (alignMatch?.[1] || alignMatch?.[2] || alignMatch?.[3] || "").trim().toLowerCase();
-  if (align === "center") return "c";
-  if (align === "right") return "r";
-  return "p";
-}
-
-function removeBlockOperation(fullText, selectionStart, selectionEnd, block) {
   const inner = fullText.slice(block.open.end, block.close.start);
-  const selectsWholeBlock = selectionStart === block.open.start && selectionEnd === block.close.end;
-  const relativeStart = selectsWholeBlock ? 0 : selectionStart - block.open.end;
-  const relativeEnd = selectsWholeBlock ? inner.length : selectionEnd - block.open.end;
-  return {
-    start: block.open.start,
-    end: block.close.end,
-    text: inner,
-    selectStart: relativeStart,
-    selectEnd: relativeEnd
-  };
-}
-function replaceBlockOperation(fullText, selectionStart, selectionEnd, tag, block) {
-  const inner = fullText.slice(block.open.end, block.close.start);
-  const selectsWholeBlock = selectionStart === block.open.start && selectionEnd === block.close.end;
-  const relativeStart = selectsWholeBlock ? 0 : selectionStart - block.open.end;
-  const relativeEnd = selectsWholeBlock ? inner.length : selectionEnd - block.open.end;
+  const whole = start === block.open.start && end === block.close.end;
   return {
     start: block.open.start,
     end: block.close.end,
     text: tag.open + inner + tag.close,
-    selectStart: tag.open.length + relativeStart,
-    selectEnd: tag.open.length + relativeEnd
+    selectStart: tag.open.length + (whole ? 0 : start - block.open.end),
+    selectEnd: tag.open.length + (whole ? inner.length : end - block.open.end)
   };
 }
 
