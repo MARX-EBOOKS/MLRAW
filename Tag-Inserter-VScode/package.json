@@ -1,6 +1,7 @@
 {
     "name":  "mew-html-tag-bar",
     "displayName":  "MEW HTML Tag Bar",
+    "publisher": "lldd1226",
     "description":  "A compact VS Code tag bar for inserting MEW HTML tags into the active editor.",
     "version":  "1.0.0",
     "private":  true,
@@ -18,6 +19,16 @@
                                              "command":  "mewTags.showBar",
                                              "title":  "MEW Tags: Show Tag Bar",
                                              "icon":  "media/tag.svg"
+                                         },
+                                         {
+                                             "command":  "mewTags.openPreviousFile",
+                                             "title":  "MEW Files: Open Previous File in Folder",
+                                             "icon":  "$(arrow-left)"
+                                         },
+                                         {
+                                             "command":  "mewTags.openNextFile",
+                                             "title":  "MEW Files: Open Next File in Folder",
+                                             "icon":  "$(arrow-right)"
                                          },
                                          {
                                              "command":  "mewTags.insert.b",
@@ -230,19 +241,39 @@
                                                 "command":  "mewTags.insert.span",
                                                 "key":  "alt+s",
                                                 "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.openPreviousFile",
+                                                "key":  "alt+pageup",
+                                                "when":  "editorTextFocus"
+                                            },
+                                            {
+                                                "command":  "mewTags.openNextFile",
+                                                "key":  "alt+pagedown",
+                                                "when":  "editorTextFocus"
                                             }
                                         ],
                         "menus":  {
                                       "editor/title":  [
                                                            {
-                                                               "command":  "mewTags.showBar",
+                                                               "command":  "mewTags.openPreviousFile",
+                                                               "when":  "resourceScheme != untitled",
                                                                "group":  "navigation@1"
+                                                           },
+                                                           {
+                                                               "command":  "mewTags.openNextFile",
+                                                               "when":  "resourceScheme != untitled",
+                                                               "group":  "navigation@2"
+                                                           },
+                                                           {
+                                                               "command":  "mewTags.showBar",
+                                                               "group":  "navigation@3"
                                                            }
                                                        ]
                                   }
                     },
     "scripts":  {
                     "start":  "node server.js",
-                    "check":  "node --check extension.cjs"
+                    "check":  "node --check extension.cjs && node --test file-navigation.test.cjs"
                 }
 }

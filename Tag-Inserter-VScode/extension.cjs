@@ -6,7 +6,7 @@ const tags = [
   { id: "em", label: "EM", open: "<em>", close: "</em>", title: "Insert emphasis" },
   { id: "q", label: "Q", open: "<blockquote>", close: "</blockquote>", title: "Alt+Q" },
   { id: "a", label: "A", open: "<a href=\"\" id=\"\">", close: "</a>", title: "Alt+A" },
-  { id: "x", label: "ID", open: "<a id=\"\">", close: "</a>", title: "Alt+X" },
+  { id: "x", label: "AID", open: "<a id=\"\">", close: "</a>", title: "Alt+X" },
   { id: "l", label: "HREF", open: "<a href=\"\">", close: "</a>", title: "Alt+L" },
   { id: "f", label: "FN", open: "<sup><a href=\"\" id=\"\">", close: "</a></sup>", title: "Alt+F" },
   { id: "r", label: "R", open: "<p align=\"right\">", close: "</p>", title: "Alt+R" },
@@ -19,18 +19,25 @@ const tags = [
   { id: "h5", label: "H5", open: "<h5>", close: "</h5>", title: "Alt+5" },
   { id: "h6", label: "H6", open: "<h6>", close: "</h6>", title: "Alt+6" },
   { id: "p", label: "P", open: "<p>", close: "</p>", title: "Alt+P" },
-  { id: "br", label: "BR", open: "<br>\n", close: "", title: "Alt+Enter" },
+  { id: "br", label: "BR", open: "<br>", close: "", title: "Alt+Enter" },
   { id: "div", label: "DIV", open: "<div>", close: "</div>", title: "Alt+D" },
+  { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" } ,
+  { id: "hr", label: "HR", open: "<hr>", close: "", title: "Insert hardline" },
+  { id: "aside", label: "ASIDE", open: "<aside>", close: "</aside>", title: "Aside" },
   { id: "sup", label: "SUP", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
-  { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" },
-  { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" }
+  { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" }
 ];
 
 const attrs = [
   { id: "idAttr", label: "ID=", text: " id=\"\"", cursorOffset: 5, title: "Insert id attribute" },
   { id: "classAttr", label: "CLASS=", text: " class=\"\"", cursorOffset: 8, title: "Insert class attribute" },
   { id: "styleAttr", label: "STYLE=", text: " style=\"\"", cursorOffset: 8, title: "Insert style attribute" },
-  { id: "noIndentAttr", label: "无缩进", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" }
+  { id: "hrs", label: "HRS", text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
+  { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" }
+];
+const nav = [
+  { type: "openPreviousFile", id: "openPreviousFile", label: "←", title: "Open Previous File in Folder" },
+  { type: "openNextFile", id: "openNextFile", label: "→", title: "Open Next File in Folder" }
 ];
 const replaceableBlockIds = new Set(["p", "r", "c", "h1", "h2", "h3", "h4", "h5", "h6", "div"]);
 const removableInlineIds = new Set(["b", "i", "em"]);
@@ -53,6 +60,10 @@ function activate(context) {
   context.subscriptions.push(
     vscode.commands.registerCommand("mewTags.showBar", showTagBar)
   );
+  context.subscriptions.push(
+    vscode.commands.registerCommand("mewTags.openPreviousFile", () => openSiblingFile(-1)),
+    vscode.commands.registerCommand("mewTags.openNextFile", () => openSiblingFile(1))
+  );
 
 
   for (const tag of tags) {
@@ -61,6 +72,97 @@ function activate(context) {
   for (const attr of attrs) {
     context.subscriptions.push(vscode.commands.registerCommand(`mewTags.insert.${attr.id}`, () => insertAttr(attr)));
   }
+}
+
+async function openSiblingFile(direction) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.isUntitled) {
+    vscode.window.showInformationMessage("请先打开一个已保存的文件。");
+    return;
+  }
+
+  const currentUri = editor.document.uri;
+  try {
+    const files = await siblingFiles(currentUri, vscode.Uri.joinPath(currentUri, ".."));
+    const currentIndex = files.findIndex(file => sameUri(file.uri, currentUri));
+    if (currentIndex < 0) return;
+    // 循环切换：首文件←到末尾，尾文件→到开头
+    const target = files[(currentIndex + direction + files.length) % files.length];
+    await vscode.commands.executeCommand("vscode.open", target.uri, {
+      viewColumn: editor.viewColumn,
+      preserveFocus: false
+    });
+  } catch (error) {
+    console.error("MEW Tags could not open the adjacent file.", error);
+  }
+}
+
+const siblingCache = new Map(); // 目录+排序配置 -> { namesKey, files }
+
+async function siblingFiles(currentUri, parentUri) {
+  const explorerConfig = vscode.workspace.getConfiguration("explorer", currentUri);
+  const options = {
+    sortOrder: explorerConfig.get("sortOrder", "default"),
+    lexicographicOptions: explorerConfig.get("sortOrderLexicographicOptions", "default"),
+    reverse: explorerConfig.get("sortOrderReverse", false)
+  };
+  const key = `${parentUri.toString(true)}|${options.sortOrder}|${options.lexicographicOptions}|${options.reverse}`;
+
+  // 轻量核对目录条目：文件列表无改动时直接复用缓存，有改动才重建
+  const names = (await vscode.workspace.fs.readDirectory(parentUri))
+    .filter(([, type]) => !(type & vscode.FileType.Directory))
+    .map(([name]) => name);
+  const namesKey = names.join("\n");
+  const cached = siblingCache.get(key);
+  if (cached && cached.namesKey === namesKey && cached.files.some(file => sameUri(file.uri, currentUri))) {
+    return cached.files;
+  }
+
+  const files = names.map(name => ({ name, uri: vscode.Uri.joinPath(parentUri, name), mtime: 0 }));
+  if (options.sortOrder === "modified") {
+    await Promise.all(files.map(async file => {
+      try { file.mtime = (await vscode.workspace.fs.stat(file.uri)).mtime; } catch {}
+    }));
+  }
+  if (!files.some(file => sameUri(file.uri, currentUri))) {
+    files.push({ name: "", uri: currentUri, mtime: 0 });
+  }
+  const sorted = sortExplorerFiles(files, options);
+  siblingCache.set(key, { namesKey, files: sorted });
+  return sorted;
+}
+
+function sameUri(one, other) {
+  return one.toString(true) === other.toString(true);
+}
+
+// —— 与 VS Code 资源管理器文件列表一致的排序（约 30 行）——
+function sortExplorerFiles(files, { sortOrder = "default", lexicographicOptions: lex = "default", reverse = false } = {}) {
+  const direction = reverse ? -1 : 1;
+  const collator = new Intl.Collator(undefined, { numeric: true });
+  const extCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: "accent" });
+  const compareWith = (c, a, b) => c.compare(a, b) || (a.length < b.length ? -1 : a.length > b.length ? 1 : 0);
+  const charCase = ch => /[A-Z]/.test(ch) ? 1 : /[a-z]/.test(ch) ? -1 : ch.toLocaleLowerCase() !== ch ? 1 : ch.toLocaleUpperCase() !== ch ? -1 : 0;
+  const caseResult = (a, b) => {
+    if (lex !== "upper" && lex !== "lower") return 0;
+    const ca = charCase(a.charAt(0)), cb = charCase(b.charAt(0));
+    return ca && cb && ca !== cb ? (lex === "upper" ? cb - ca : ca - cb) : 0;
+  };
+  const extension = name => {
+    const match = /^(.*?)(\.([^.]*))?$/.exec(name);
+    return match && match[1] && match[1].charAt(0) !== "." && match[3] ? match[3] : "";
+  };
+  const byName = (a, b) => lex === "unicode" ? (a === b ? 0 : a < b ? -1 : 1) : caseResult(a, b) || compareWith(collator, a, b);
+  const byExtension = (a, b) => {
+    if (lex === "unicode") {
+      const x = extension(a).toLowerCase(), y = extension(b).toLowerCase();
+      return (x === y ? 0 : x < y ? -1 : 1) || (a === b ? 0 : a < b ? -1 : 1);
+    }
+    return compareWith(extCollator, extension(a), extension(b)) || caseResult(a, b) || compareWith(collator, a, b);
+  };
+  const byFile = (a, b) => sortOrder === "type" ? byExtension(a.name, b.name)
+    : sortOrder === "modified" && a.mtime !== b.mtime ? (a.mtime < b.mtime ? 1 : -1) : byName(a.name, b.name);
+  return [...files].sort((a, b) => direction * byFile(a, b));
 }
 
 async function showTagBar() {
@@ -127,7 +229,9 @@ function deleteTagOperation(fullText, start, end, tag) {
         if (openIndex < 0) continue;
         const open = stack.splice(openIndex, 1)[0];
         const close = { start: match.index, end: pattern.lastIndex };
-        if ((open.end <= start && end <= close.start) || (open.start === start && close.end === end)) {
+        const cursorInOpenTag = start === end && open.start < start && start < open.end;
+        if (cursorInOpenTag || (open.end <= start && end <= close.start) ||
+            (open.start === start && close.end === end)) {
           candidates.push({ open, close });
         }
       }
@@ -147,12 +251,13 @@ function deleteTagOperation(fullText, start, end, tag) {
   if (enclosing) {
     const inner = fullText.slice(enclosing.open.end, enclosing.close.start);
     const whole = start === enclosing.open.start && end === enclosing.close.end;
+    const cursorInOpenTag = start === end && enclosing.open.start < start && start < enclosing.open.end;
     return { operation: {
       start: enclosing.open.start,
       end: enclosing.close.end,
       text: inner,
-      selectStart: whole ? 0 : start - enclosing.open.end,
-      selectEnd: whole ? inner.length : end - enclosing.open.end
+      selectStart: whole || cursorInOpenTag ? 0 : start - enclosing.open.end,
+      selectEnd: whole ? inner.length : cursorInOpenTag ? 0 : end - enclosing.open.end
     }, block: null };
   }
   if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
@@ -183,12 +288,17 @@ function insertTagOperation(fullText, start, end, tag, block) {
 
   const inner = fullText.slice(block.open.end, block.close.start);
   const whole = start === block.open.start && end === block.close.end;
+  const cursorInOpenTag = start === end && block.open.start < start && start < block.open.end;
+  const selectStart = cursorInOpenTag ? tag.open.length
+    : tag.open.length + (whole ? 0 : start - block.open.end);
+  const selectEnd = cursorInOpenTag ? tag.open.length
+    : tag.open.length + (whole ? inner.length : end - block.open.end);
   return {
     start: block.open.start,
     end: block.close.end,
     text: tag.open + inner + tag.close,
-    selectStart: tag.open.length + (whole ? 0 : start - block.open.end),
-    selectEnd: tag.open.length + (whole ? inner.length : end - block.open.end)
+    selectStart,
+    selectEnd
   };
 }
 
@@ -260,11 +370,14 @@ function handleBarMessage(message) {
     const attr = attrs.find(item => item.id === message.id);
     if (attr) insertAttr(attr);
   }
+  if (message.type === "openPreviousFile") openSiblingFile(-1);
+  if (message.type === "openNextFile") openSiblingFile(1);
 }
 function renderBar(webview) {
   const nonce = String(Date.now());
   const tagButtons = tags.map(tag => buttonHtml("insertTag", tag)).join("");
   const attrButtons = attrs.map(attr => buttonHtml("insertAttr", attr, "attr")).join("");
+  const navButtons = nav.map(item => buttonHtml(item.type, item, "attr")).join("");
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -312,6 +425,8 @@ function renderBar(webview) {
     ${tagButtons}
     <span class="spacer"></span>
     ${attrButtons}
+    <span class="spacer"></span>
+    ${navButtons}
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -331,7 +446,6 @@ function buttonHtml(type, item, extraClass = "") {
   const classAttr = extraClass ? ` class="${escapeHtml(extraClass)}"` : "";
   return `<button${classAttr} data-type="${type}" data-id="${escapeHtml(item.id)}" title="${escapeHtml(item.title)}">${escapeHtml(item.label)}</button>`;
 }
-
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, ch => ({
     "&": "&amp;",
