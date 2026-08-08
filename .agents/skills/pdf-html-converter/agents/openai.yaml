@@ -1,0 +1,4 @@
+interface:
+  display_name: "PDF 转 HTML"
+  short_description: "在 GUI 或 VS Code 中由 Luna 子 agent 逐组转换并校订"
+  default_prompt: "使用 $pdf-html-converter；为每个页码组直接调用 pdf_page_worker 子 agent 完成转换和二次校订，主线程只负责规划、纠错和验收。"
