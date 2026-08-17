@@ -19,10 +19,8 @@ const tags = [
   { id: "h5", label: "H5", open: "<h5>", close: "</h5>", title: "Alt+5" },
   { id: "h6", label: "H6", open: "<h6>", close: "</h6>", title: "Alt+6" },
   { id: "p", label: "P", open: "<p>", close: "</p>", title: "Alt+P" },
-  { id: "br", label: "BR", open: "<br>", close: "", title: "Alt+Enter" },
   { id: "div", label: "DIV", open: "<div>", close: "</div>", title: "Alt+D" },
-  { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" } ,
-  { id: "hr", label: "HR", open: "<hr>", close: "", title: "Insert hardline" },
+  { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" },
   { id: "aside", label: "ASIDE", open: "<aside>", close: "</aside>", title: "Aside" },
   { id: "sup", label: "SUP", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
   { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" }
@@ -33,15 +31,171 @@ const attrs = [
   { id: "classAttr", label: "CLASS=", text: " class=\"\"", cursorOffset: 8, title: "Insert class attribute" },
   { id: "styleAttr", label: "STYLE=", text: " style=\"\"", cursorOffset: 8, title: "Insert style attribute" },
   { id: "hrs", label: "HRS", text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
-  { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" }
+  { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" },
+  { id: "HR", label: "HR", text: "<hr>", cursorOffset: 3, title: "Insert hardline" },
+  { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" }
 ];
 const nav = [
   { type: "openPreviousFile", id: "openPreviousFile", label: "←", title: "Open Previous File in Folder" },
   { type: "openNextFile", id: "openNextFile", label: "→", title: "Open Next File in Folder" }
 ];
-const replaceableBlockIds = new Set(["p", "r", "c", "h1", "h2", "h3", "h4", "h5", "h6", "div"]);
-const removableInlineIds = new Set(["b", "i", "em"]);
+const BLOCK_IDS = new Set(["p", "r", "c", "h1", "h2", "h3", "h4", "h5", "h6", "div"]);
+const VOID_TAGS = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
+const RAW_TAGS = new Set(["script", "style", "textarea", "title"]);
+const TAG_PATTERN = /<!--[\s\S]*?-->|<\/?[A-Za-z][\w:-]*\b(?:[^>"']|"[^"]*"|'[^']*')*>/g;
 
+function buildTagEdit(text, start, end, tag) {
+  const elements = tagPairs(text);
+  const selected = text.slice(start, end);
+  const name = tagName(tag.open);
+  const complete = start < end && isCompleteSelection(text, elements, start, end);
+  const exact = complete && elements.find(element => element.start === start && element.end === end);
+
+  // 完整选中就是操作外层；否则只操作包住选区的最内层。
+  if (complete) {
+    // 错配闭合标签：以前面的开始标签为准。点击同类标签删除，
+    // 点击其他标签则直接替换整个外层，而不是再包一层。
+    if (exact && exact.closeName && exact.closeName !== exact.name) {
+      if (name === exact.name) return changeWrapper(text, exact, start, end);
+      return changeWrapper(text, exact, start, end, tag);
+    }
+    if (exact && isBlock(exact) && BLOCK_IDS.has(tag.id)) {
+      if (blockId(exact) === tag.id) return changeWrapper(text, exact, start, end);
+      if (tag.id !== "div") return changeWrapper(text, exact, start, end, tag);
+    }
+    if (exact && exact.name === name && isSimplePair(tag)) return changeWrapper(text, exact, start, end);
+    if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
+      const inner = selected.slice(tag.open.length, -tag.close.length);
+      return { start, end, text: inner, selectStart: 0, selectEnd: inner.length };
+    }
+    return wrapEdit(start, end, selected, tag, true);
+  }
+
+  const block = BLOCK_IDS.has(tag.id) && innermost(elements.filter(isBlock), start, end);
+  if (block) return changeWrapper(text, block, start, end, blockId(block) === tag.id ? undefined : tag);
+
+  const same = name && isSimplePair(tag) && innermost(elements.filter(element => element.name === name), start, end);
+  if (same) return changeWrapper(text, same, start, end);
+
+  const before = start - tag.open.length;
+  const after = end + tag.close.length;
+  if (tag.close && before >= 0 && text.slice(before, start) === tag.open && text.slice(end, after) === tag.close) {
+    return { start: before, end: after, text: selected, selectStart: 0, selectEnd: selected.length };
+  }
+  return wrapEdit(start, end, selected, tag, false);
+}
+
+function changeWrapper(text, element, start, end, tag) {
+  const open = tag?.open || "", close = tag?.close || "";
+  const inner = text.slice(element.openEnd, element.closeStart);
+  const whole = start === element.start && end === element.end;
+  const inOpeningTag = start === end && element.start < start && start < element.openEnd;
+  const from = whole || inOpeningTag ? 0 : start - element.openEnd;
+  const to = whole ? inner.length : inOpeningTag ? 0 : end - element.openEnd;
+  return {
+    start: element.start,
+    end: element.end,
+    text: open + inner + close,
+    selectStart: open.length + from,
+    selectEnd: open.length + to
+  };
+}
+
+function wrapEdit(start, end, selected, tag, keepSelection) {
+  const text = tag.open + selected + tag.close;
+  const emptyAttribute = tag.open.indexOf('=""');
+  const cursor = emptyAttribute >= 0 ? emptyAttribute + 2 : selected ? text.length : tag.open.length;
+  return {
+    start, end, text,
+    selectStart: keepSelection ? tag.open.length : cursor,
+    selectEnd: keepSelection ? tag.open.length + selected.length : cursor
+  };
+}
+
+function innermost(elements, start, end) {
+  return elements
+    .filter(element => (start === end && element.start < start && start < element.openEnd) ||
+      (element.openEnd <= start && end <= element.closeStart))
+    .reduce((inner, element) => !inner || element.end - element.start < inner.end - inner.start ? element : inner, undefined);
+}
+
+function isCompleteSelection(text, elements, start, end) {
+  let cursor = skipSpace(text, start, end), found = false;
+  while (cursor < end) {
+    const outer = elements
+      .filter(element => element.start === cursor && element.end <= end)
+      .reduce((root, element) => !root || element.end > root.end ? element : root, undefined);
+    if (!outer) return false;
+    found = true;
+    cursor = skipSpace(text, outer.end, end);
+  }
+  return found;
+}
+
+function skipSpace(text, start, end) {
+  while (start < end && /\s/.test(text[start])) start += 1;
+  return start;
+}
+
+function tagPairs(text) {
+  const stack = [], pairs = [];
+  let rawName;
+  TAG_PATTERN.lastIndex = 0;
+  for (let match; (match = TAG_PATTERN.exec(text));) {
+    const token = match[0];
+    if (token.startsWith("<!--")) continue;
+    const name = token.match(/^<\/?([A-Za-z][\w:-]*)/i)[1].toLowerCase();
+    const closing = /^<\//.test(token);
+
+    if (rawName && !(closing && name === rawName)) continue;
+    if (closing) {
+      const open = stack[stack.length - 1];
+      if (open?.name === name) {
+        // 正常闭合：仍然优先按同名标签配对。
+        stack.pop();
+        pairs.push({ name: open.name, closeName: name, start: open.start, openEnd: open.end, closeStart: match.index, end: TAG_PATTERN.lastIndex, open: open.token });
+        if (name === rawName) rawName = undefined;
+      } else {
+        const crossed = stack.map(item => item.name).lastIndexOf(name);
+        if (crossed >= 0) {
+          // 存在同名开始标签时，沿用原来的交叉标签恢复逻辑。
+          stack.length = crossed;
+        } else if (open) {
+          // 容错：结束标签名称不一致时，以最近的开始标签为准。
+          // 例如 <p align="center">text</h1> 会被视作一个 p 元素，
+          // 从而可以用 C 删除外层，或用 H1/P/DIV 等替换整个外层。
+          stack.pop();
+          pairs.push({ name: open.name, closeName: name, start: open.start, openEnd: open.end, closeStart: match.index, end: TAG_PATTERN.lastIndex, open: open.token });
+        }
+      }
+    } else if (VOID_TAGS.has(name) || /\/\s*>$/.test(token)) {
+      pairs.push({ name, start: match.index, openEnd: TAG_PATTERN.lastIndex, closeStart: TAG_PATTERN.lastIndex, end: TAG_PATTERN.lastIndex, open: token });
+    } else {
+      stack.push({ name, start: match.index, end: TAG_PATTERN.lastIndex, token });
+      if (RAW_TAGS.has(name)) rawName = name;
+    }
+  }
+  return pairs;
+}
+
+function tagName(open) {
+  return /^<([A-Za-z][\w:-]*)\b/.exec(open)?.[1].toLowerCase();
+}
+
+function isSimplePair(tag) {
+  const name = tagName(tag.open);
+  return Boolean(name && tag.close.toLowerCase() === `</${name}>`);
+}
+
+function isBlock(element) {
+  return element.name === "p" || element.name === "div" || /^h[1-6]$/.test(element.name);
+}
+
+function blockId(element) {
+  if (element.name !== "p") return element.name;
+  const align = element.open.match(/\balign\s*=\s*["']?(center|right)/i)?.[1]?.toLowerCase();
+  return align === "center" ? "c" : align === "right" ? "r" : "p";
+}
 
 let lastEditor;
 
@@ -75,13 +229,13 @@ function activate(context) {
 }
 
 async function openSiblingFile(direction) {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.isUntitled) {
+  const current = activeFile();
+  if (!current || current.uri.scheme === "untitled") {
     vscode.window.showInformationMessage("请先打开一个已保存的文件。");
     return;
   }
 
-  const currentUri = editor.document.uri;
+  const currentUri = current.uri;
   try {
     const files = await siblingFiles(currentUri, vscode.Uri.joinPath(currentUri, ".."));
     const currentIndex = files.findIndex(file => sameUri(file.uri, currentUri));
@@ -89,12 +243,36 @@ async function openSiblingFile(direction) {
     // 循环切换：首文件←到末尾，尾文件→到开头
     const target = files[(currentIndex + direction + files.length) % files.length];
     await vscode.commands.executeCommand("vscode.open", target.uri, {
-      viewColumn: editor.viewColumn,
+      viewColumn: current.viewColumn,
       preserveFocus: false
     });
   } catch (error) {
     console.error("MEW Tags could not open the adjacent file.", error);
   }
+}
+
+// Images, PDFs and other custom editors do not appear in activeTextEditor.
+// Their URI is available through the active tab input instead.
+function activeFile() {
+  const group = vscode.window.tabGroups.activeTabGroup;
+  const tabUri = uriFromTabInput(group && group.activeTab && group.activeTab.input);
+  if (tabUri) return { uri: tabUri, viewColumn: group.viewColumn };
+
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.isUntitled) return undefined;
+  return { uri: editor.document.uri, viewColumn: editor.viewColumn };
+}
+
+function uriFromTabInput(input) {
+  if (!input) return undefined;
+  // `uri`: text/custom/notebook editors; `modified`: diff editors;
+  // `result`: merge editors. The latter two keep navigation useful there too.
+  for (const candidate of [input.uri, input.modified, input.result, input.original]) {
+    if (candidate && typeof candidate.scheme === "string" && typeof candidate.toString === "function") {
+      return candidate;
+    }
+  }
+  return undefined;
 }
 
 const siblingCache = new Map(); // 目录+排序配置 -> { namesKey, files }
@@ -121,7 +299,7 @@ async function siblingFiles(currentUri, parentUri) {
   const files = names.map(name => ({ name, uri: vscode.Uri.joinPath(parentUri, name), mtime: 0 }));
   if (options.sortOrder === "modified") {
     await Promise.all(files.map(async file => {
-      try { file.mtime = (await vscode.workspace.fs.stat(file.uri)).mtime; } catch {}
+      try { file.mtime = (await vscode.workspace.fs.stat(file.uri)).mtime; } catch { }
     }));
   }
   if (!files.some(file => sameUri(file.uri, currentUri))) {
@@ -205,101 +383,7 @@ async function insertTag(tag) {
 function buildTagOperation(document, fullText, selection, tag) {
   const start = document.offsetAt(selection.start);
   const end = document.offsetAt(selection.end);
-  const deletion = deleteTagOperation(fullText, start, end, tag);
-  return deletion.operation || insertTagOperation(fullText, start, end, tag, deletion.block);
-}
-
-function deleteTagOperation(fullText, start, end, tag) {
-  const selected = fullText.slice(start, end);
-  const names = removableInlineIds.has(tag.id) ? tag.id
-    : replaceableBlockIds.has(tag.id) ? "p|h[1-6]|div" : "";
-  const stack = [], candidates = [];
-
-  if (names) {
-    const pattern = new RegExp(`<\\/?(?:${names})\\b(?:[^>"']|"[^"]*"|'[^']*')*>`, "gi");
-    let match;
-    while ((match = pattern.exec(fullText))) {
-      const token = match[0];
-      const name = token.match(/^<\/?([^\s>]+)/)[1].toLowerCase();
-      if (!/^<\//.test(token) && !/\/\s*>$/.test(token)) {
-        stack.push({ name, token, start: match.index, end: pattern.lastIndex });
-      } else if (/^<\//.test(token)) {
-        const openIndex = replaceableBlockIds.has(tag.id) ? stack.length - 1
-          : stack.map(item => item.name).lastIndexOf(name);
-        if (openIndex < 0) continue;
-        const open = stack.splice(openIndex, 1)[0];
-        const close = { start: match.index, end: pattern.lastIndex };
-        const cursorInOpenTag = start === end && open.start < start && start < open.end;
-        if (cursorInOpenTag || (open.end <= start && end <= close.start) ||
-            (open.start === start && close.end === end)) {
-          candidates.push({ open, close });
-        }
-      }
-    }
-  }
-
-  const enclosing = candidates.sort((a, b) =>
-    (a.close.end - a.open.start) - (b.close.end - b.open.start)
-  )[0];
-  if (enclosing && replaceableBlockIds.has(tag.id)) {
-    const name = enclosing.open.name;
-    const align = (enclosing.open.token.match(/\balign\s*=\s*["']?(center|right)/i)?.[1] || "").toLowerCase();
-    const currentId = name === "p" && align ? (align === "center" ? "c" : "r") : name;
-    if (currentId !== tag.id) return { operation: null, block: enclosing };
-  }
-
-  if (enclosing) {
-    const inner = fullText.slice(enclosing.open.end, enclosing.close.start);
-    const whole = start === enclosing.open.start && end === enclosing.close.end;
-    const cursorInOpenTag = start === end && enclosing.open.start < start && start < enclosing.open.end;
-    return { operation: {
-      start: enclosing.open.start,
-      end: enclosing.close.end,
-      text: inner,
-      selectStart: whole || cursorInOpenTag ? 0 : start - enclosing.open.end,
-      selectEnd: whole ? inner.length : cursorInOpenTag ? 0 : end - enclosing.open.end
-    }, block: null };
-  }
-  if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
-    const inner = selected.slice(tag.open.length, selected.length - tag.close.length);
-    return { operation: { start, end, text: inner, selectStart: 0, selectEnd: inner.length }, block: null };
-  }
-  const beforeStart = start - tag.open.length;
-  const afterEnd = end + tag.close.length;
-  if (tag.close && beforeStart >= 0 && afterEnd <= fullText.length &&
-      fullText.slice(beforeStart, start) === tag.open && fullText.slice(end, afterEnd) === tag.close) {
-    return { operation: {
-      start: beforeStart, end: afterEnd, text: selected,
-      selectStart: 0, selectEnd: selected.length
-    }, block: null };
-  }
-  return { operation: null, block: null };
-}
-
-function insertTagOperation(fullText, start, end, tag, block) {
-  const selected = fullText.slice(start, end);
-  if (!block) {
-    const text = tag.open + selected + tag.close;
-    const emptyAttribute = tag.open.indexOf('=""');
-    const cursor = emptyAttribute >= 0 ? emptyAttribute + 2
-      : selected ? text.length : tag.open.length;
-    return { start, end, text, selectStart: cursor, selectEnd: cursor };
-  }
-
-  const inner = fullText.slice(block.open.end, block.close.start);
-  const whole = start === block.open.start && end === block.close.end;
-  const cursorInOpenTag = start === end && block.open.start < start && start < block.open.end;
-  const selectStart = cursorInOpenTag ? tag.open.length
-    : tag.open.length + (whole ? 0 : start - block.open.end);
-  const selectEnd = cursorInOpenTag ? tag.open.length
-    : tag.open.length + (whole ? inner.length : end - block.open.end);
-  return {
-    start: block.open.start,
-    end: block.close.end,
-    text: tag.open + inner + tag.close,
-    selectStart,
-    selectEnd
-  };
+  return buildTagEdit(fullText, start, end, tag);
 }
 
 function uniqueOperations(operations) {
@@ -456,6 +540,6 @@ function escapeHtml(value) {
   })[ch]);
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = { activate, deactivate };
