@@ -1,0 +1,12 @@
+{
+  "name": "mew-html-editor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node reader-server.js -p 17000"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.2.108"
+  }
+}

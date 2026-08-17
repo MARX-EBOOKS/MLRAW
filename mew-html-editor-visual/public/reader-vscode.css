@@ -1,0 +1,131 @@
+/* Resizable panes and VS Code-inspired dark chrome. */
+.reader-grid {
+  grid-template-columns: minmax(280px, var(--left-pane, 54%)) 6px minmax(280px, 1fr);
+  gap: 0;
+}
+
+.pane-splitter {
+  position: relative;
+  z-index: 3;
+  background: var(--line);
+  cursor: col-resize;
+  touch-action: none;
+  transition: background .12s;
+}
+
+.pane-splitter::after {
+  content: "";
+  position: absolute;
+  inset: 0 -3px;
+}
+
+.pane-splitter:hover,
+.pane-splitter.dragging {
+  background: var(--red);
+}
+
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.resizing iframe {
+  pointer-events: none;
+}
+
+.site-header,
+.page-footer {
+  background: var(--chrome, #2d2925);
+}
+
+.site-header {
+  border-bottom-color: var(--red);
+}
+
+.site-header button,
+.site-header select,
+.site-header input,
+.page-footer button {
+  background: var(--control, #423d38);
+  border-color: var(--control-border, #625b54);
+}
+
+.scan-pane {
+  background: var(--scan-bg, #cbc5bc);
+}
+
+body.dark {
+  color-scheme: dark;
+  --bg: #181818;
+  --panel: #1e1e1e;
+  --ink: #cccccc;
+  --muted: #9d9d9d;
+  --line: #3c3c3c;
+  --soft: #252526;
+  --code: #1e1e1e;
+  --red: #007acc;
+  --chrome: #181818;
+  --control: #2d2d30;
+  --control-border: #464647;
+  --scan-bg: #252526;
+  --tag: #4fc1ff;
+  --attr: #c586c0;
+  --string: #ce9178;
+  --comment: #6a9955;
+}
+
+body.dark .tag-bar,
+body.dark .find-bar,
+body.dark .scan-tools {
+  background: #252526;
+}
+
+body.dark button:hover,
+body.dark select:hover,
+body.dark input:hover {
+  border-color: #007acc;
+}
+
+body.dark #visualEditor {
+  filter: none;
+  background: #fff;
+}
+
+body.dark #tocList a:hover,
+body.dark #tocList a.active {
+  background: #094771;
+  color: #fff;
+}
+
+body.dark * {
+  scrollbar-color: #797979 #1e1e1e;
+  scrollbar-width: thin;
+}
+
+body.dark *::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+body.dark *::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+body.dark *::-webkit-scrollbar-thumb {
+  background: #5a5a5a;
+  border: 3px solid #1e1e1e;
+}
+
+body.dark *::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+@media (max-width: 850px) {
+  .reader-grid {
+    display: block;
+  }
+
+  .pane-splitter {
+    display: none;
+  }
+}
