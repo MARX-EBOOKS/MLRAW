@@ -1,0 +1,145 @@
+<html>
+<head>
+<title>3 · Engels an Carlo Cafiero · 28. Juli 1871</title>
+</head>
+<body>
+<p>verschiedenen <i>nationalen Abteilungen</i> überlassen. Die Konferenz wird nur wenige Tage zu ihrer Verfügung haben, und so wird sie ihre Diskussionen hauptsächlich auf die praktischen Fragen der inneren Verwaltung, der allgemeinen Organisation der Gesellschaft beschränken. Da weder ihre Sitzungen öffentlich sein werden, noch die Diskussionen später veröffentlicht werden sollen, wird die Diskussion der theoretischen Fragen wenig Bedeutung haben; doch wird die Zusammenkunft der Delegierten eine gute Gelegenheit zum Austausch ihrer Ideen bieten. Der Generalrat wird der Konferenz einen Rechenschaftsbericht für die zwei vergangenen Jahre unterbreiten, und die Konferenz wird sich darüber äußern. So wird es einige wichtige Fragen geben, bevor es weitergeht.</p>
+<p>Ich bitte Sie jedoch, die Reorganisation unserer Sektionen in Italien soweit als möglich voranzutreiben, damit sie auf dieser Konferenz vertreten sind. Da Gambuzzi um diese Zeit nach London kommen wird, könnte er vielleicht seine Reise entsprechend einrichten und ein Mandat als einer Ihrer Delegierten erhalten. Ich muß jedoch gleichzeitig Ihre Aufmerksamkeit auf den Artikel 8 der Verwaltungsordnung lenken, der besagt:</p>
+<p>„Nur die Delegierten der Abteilungen und Sektionen, die ihre Beiträge an den Generalrat bezahlt haben, können an den Arbeiten des Kongresses teilnehmen.“<a id="A725"></a> Der Jahresbeitrag ist ein Soldo oder 10 Centesimi für jedes Mitglied, und es wäre gut, wenn sie noch bis zur Konferenz eingesandt würden, da sonst unter Umständen Schwierigkeiten wegen der Zulassung der Delegierten entstehen könnten.</p>
+<p>Würden Sie mir den Gefallen tun und mir mindestens 6 Exemplare der italienischen Übersetzung von „Der Bürgerkrieg in Frankreich“<a id="A712"></a>, sobald sie erschienen ist, für den Rat schicken.</p>
+<p>Es wäre gut, wenn Sie auf die Adresse Ihres Briefes statt meines Namen den von Fräulein Burns schrieben, und zwar: Miss Burns, 122, Regent's Park et <i>rien de plus</i><sup><a id="ZF20" href="#F20">20</a></sup>, keinen weiteren inneren Umschlag oder Adresse. Es ist meine Nichte, ein Mädchen, das nicht Italienisch versteht, daher ist kein Irrtum zu befürchten.</p>
+<p>Inliegend noch unsere Adresse an den Amerikanischen Rat, die das Verhalten ihres Gesandten in Paris, Herrn Washburne, anprangert.<sup><a id="ZF21" href="#F21">21</a></sup></p>
+<p>2. und 3. die veröffentlichten Berichte über die 2 Sitzungen des Rats. (Diese veröffentlichten Berichte enthalten nur das, was wir wünschen, daß es veröffentlicht wird; es wurden alle die innere Verwaltung betreffenden Angelegenheiten weggelassen.)</p>
+<p align="right"><i>F. Engels</i></p>
+<p>Aus dem Italienischen.</p>
+<aside>
+<p><a id="F20" href="#ZF20">(20)</a> und <i>nichts weiter</i></p>
+<p><a id="F21" href="#ZF21">(21)</a> Karl Marx: „Herr Washburne, der amerikanische Gesandte in Paris“</p>
+</aside>
+<aside>
+<p><a id="F20" href="#ZF20">20</a> und <i>nichts weiter</i></p>
+<p><a id="F21" href="#ZF21">21</a> Karl Marx: „Herr Washburne, der amerikanische Gesandte in Paris“</p>
+</aside>
+</body>
+</html>
+```
+**修正思考**：
+关于注释类型。
+页脚内容：`20 und nichts weiter – 21 Karl Marx: „Herr Washburne, der amerikanische Gesandte in Paris“`
+这里20和21是编者注（纯数字上标，页脚有长横线分隔）。
+但是，内容里出现了 "Karl Marx: ..."。
+根据规则5：
+(1) 作者本人的注解（Marx, Engels, Lenin）：上标通常是星号。这里正文中是纯数字20, 21。
+(2) 编者的脚注标记：纯数字上标。
+正文中 `rien de plus` 后是 `20`（上标）。`anprangert.` 后是 `21`（上标）。
+所以20和21是编者注。
+脚注内容里 `21 Karl Marx: ...` 这是编者注的内容，引用了马克思的话。
+所以应该放在编者注的 `<aside>` 里。
+作者注的 `<aside>` 是空的，或者不需要输出？
+规则5说：“作者注和编者注的aside独立，首先输出作者注的aside，再输出编者注的aside。”
+如果没有作者注，就不输出作者注的aside？或者输出空的？
+通常如果没有，就不输出。
+但是，为了保险，我看下规则。
+规则(1)说“作者本人的注解...按照识别阶段的编号及id输出”。这里没有作者注（星号上标）。
+所以只有编者注。
+
+再看书末注释 `[725]` 和 `[712]`。
+规则4：“识别为书末注释的上标...仅需且只应输出为锚点...不要输出为任何显式文本！”
+所以正文里不显示数字，只显示 `<a id="A725"></a>`。
+
+再看页脚最下方的内容索引信息。
+规则4：“同时识别到页脚最下方的内容索引信息即书末注释用于导航的信息标签请直接丢弃！”
+图片页脚只有 `20 ... 21 ...`，没有看到孤立的数字或书名加页码（如 `3 MEW Band 3...`）。
+哦，页眉有 `671`。这是页码。
+规则2：“页眉去除页码后转为 title”。Title已经是 `3 · Engels an Carlo Cafiero · 28. Juli 1871`。
+
+关于注释ID前缀。
+规则6：“相应上标的id定为M/E/L前加Z...编者注的id前缀为F”。
+正文上标：`<sup><a id="ZF20" href="#F20">20</a></sup>`。
+脚注链接：`<a id="F20" href="#ZF20">20</a>`。
+
+等等，我之前的代码里写了 `<aside>` 包含作者注（M20, M21），这是错的。
+20和21是编者注，因为正文里是纯数字上标。
+而且页脚有长横线（虽然图片里只有一条短横线在20/21上方，那是分隔作者注和编者注的？或者分隔正文和脚注？）。
+通常：
+正文
+--- (短横线，分隔作者注)
+作者注内容
+--- (长横线，分隔编者注)
+编者注内容
+
+图片里：
+落款 F. Engels
+Aus dem Italienischen.
+(长横线)
+20 ... 21 ...
+
+这里只有一条横线。
+根据规则5(2)：“编者注栏与正文、作者注栏间用横贯页面的长横线分隔”。
+这里横线在 "Aus dem Italienischen." 下方。
+所以 20, 21 是编者注。
+
+那作者注呢？
+正文里没有星号上标。
+所以没有作者注。
+只需要输出编者注的 `<aside>`。
+
+再仔细看图片页脚。
+`20 und nichts weiter – 21 Karl Marx: „Herr Washburne, der amerikanische Gesandte in Paris“`
+这整行都在横线下方。
+所以这是编者注。
+
+修正代码：
+去掉作者注的 aside。
+只保留编者注的 aside。
+
+再检查书末注释锚点。
+`[725]` -> `<a id="A725"></a>`。
+`[712]` -> `<a id="A712"></a>`。
+
+最终检查文本：
+`all-gemeinen` -> `allgemeinen`。
+`Be-deutung` -> `Bedeutung`。
+`Aufmerk-samkeit` -> `Aufmerksamkeit`。
+这些连字符在行末，去掉。
+
+`rien de plus` 是斜体。
+`nationalen Abteilungen` 是斜体。
+
+代码结构：
+```html
+<html>
+<head>
+<title>3 · Engels an Carlo Cafiero · 28. Juli 1871</title>
+</head>
+<body>
+<p>verschiedenen <i>nationalen Abteilungen</i> überlassen... (接上文)</p>
+...
+<p>... <a id="A725"></a> ...</p>
+...
+<p>... <a id="A712"></a> ...</p>
+...
+<p>... <sup><a id="ZF20" href="#F20">20</a></sup> ...</p>
+...
+<p>... <sup><a id="ZF21" href="#F21">21</a></sup></p>
+...
+<p align="right"><i>F. Engels</i></p>
+<p>Aus dem Italienischen.</p>
+<aside>
+<p><a id="F20" href="#ZF20">20</a> und <i>nichts weiter</i></p>
+<p><a id="F21" href="#ZF21">21</a> Karl Marx: „Herr Washburne, der amerikanische Gesandte in Paris“</p>
+</aside>
+</body>
+</html>
+```
+注意：规则5(4)说“如正文中有多处指向同一脚注的上标...”。这里20和21各只出现一次。
+规则5(5)“务必重新编制数字编号，确保本组范围内编号的唯一性与连续性”。
+这里只有20, 21。编号连续。
+
+关于 `2. und 3.` 段落。
+这是正文内容。
+
+关于 `Aus dem Italienischen.`
+这是正文结束后的说明，不算页脚。
+
+OK，生成最终结果。
