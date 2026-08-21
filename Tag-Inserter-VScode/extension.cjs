@@ -251,16 +251,22 @@ async function openSiblingFile(direction) {
   }
 }
 
+// 点击标签栏按钮时 webview 视图持有焦点，vscode.window.activeTextEditor 为
+// undefined，此时直接用 tabGroups 取活动标签容易拿到错误/滞后的标签（导致
+// 弹回标签栏第一个文件）。因此优先取活动文本编辑器，webview 夺焦时退回
+// lastEditor（最近一次活动的文本编辑器）。
 // Images, PDFs and other custom editors do not appear in activeTextEditor.
 // Their URI is available through the active tab input instead.
 function activeFile() {
+  const editor = vscode.window.activeTextEditor || lastEditor;
+  if (editor && !editor.document.isUntitled) {
+    return { uri: editor.document.uri, viewColumn: editor.viewColumn };
+  }
+
   const group = vscode.window.tabGroups.activeTabGroup;
   const tabUri = uriFromTabInput(group && group.activeTab && group.activeTab.input);
   if (tabUri) return { uri: tabUri, viewColumn: group.viewColumn };
-
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.isUntitled) return undefined;
-  return { uri: editor.document.uri, viewColumn: editor.viewColumn };
+  return undefined;
 }
 
 function uriFromTabInput(input) {
