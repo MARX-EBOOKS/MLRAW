@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MEW Monaco Editor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2224%22 font-size=%2224%22>✎</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="monaco-workbench.css">
+  <link rel="stylesheet" href="tag-panel.css">
+</head>
+<body>
+  <header>
+    <strong>MEW Monaco Editor</strong>
+    <span id="fileName">No file open</span>
+    <details id="fileMenu" class="menu">
+      <summary>File</summary>
+      <div class="menuPanel">
+      <button id="saveBtn" title="Save current file">Save</button>
+      <button id="saveAllBtn" title="Save all open files (Ctrl+K S)">Save all</button>
+      <button id="submitChangeBtn" hidden title="Create a pull/merge request from staged changes">提交 PR/MR</button>
+      <button id="gitConfigBtn" hidden title="Change Git provider or repository">切换仓库</button>
+        <button id="undoBtn" title="Undo last edit">Undo</button>
+        <button id="redoBtn" title="Redo last undone edit">Redo</button>
+        <button id="treePaneToggle" type="button" aria-pressed="true">隐藏文件树</button>
+        <button id="previewPaneToggle" type="button" aria-pressed="true">隐藏预览</button>
+      </div>
+    </details>
+    <button id="findBtn" title="查找 / 替换（Ctrl+F / Ctrl+H）">查找 / 替换</button>
+    <button id="darkBtn" title="Toggle dark mode">Dark</button>
+    <label title="When on, single keys insert tags instead of typing letters"><input id="instant" type="checkbox"> instant keys</label>
+    <span class="topActions">
+      <button id="prevFileBtn" title="切换到文件夹中的上一个文件">← 上一文件</button>
+      <button id="nextFileBtn" title="切换到文件夹中的下一个文件">下一文件 →</button>
+      <button id="newWinBtn" title="Open current file in a new editor window">New window</button>
+      <button id="closeSavedBtn" title="Close all saved windows">Close saved</button>
+      <button id="closeAllBtn" title="Close all open windows">Close all</button>
+      <button id="fullBtn" title="Toggle fullscreen">Fullscreen</button>
+    </span>
+  </header>
+  <main>
+    <aside id="explorerPane" aria-label="文件资源管理器">
+      <strong class="paneTitle">文件资源管理器</strong>
+      <div class="treeActions">
+        <button id="treeRefreshBtn" title="Refresh file tree">刷新</button>
+        <button id="treeCollapseBtn" title="Collapse folders">折叠</button>
+        <button id="treeRevealBtn" title="Reveal active file">定位</button>
+      </div>
+      <input id="treeFilter" placeholder="筛选文件…" aria-label="筛选文件">
+      <div id="rootPath"></div>
+      <div id="tree" role="tree" aria-label="工作区文件"></div>
+    </aside>
+    <div class="paneSplitter" id="treeSplitter" role="separator" tabindex="0" aria-label="调整文件树宽度" aria-orientation="vertical" aria-controls="explorerPane" title="拖动调整文件树宽度；方向键微调；双击恢复"></div>
+    <section class="editorPane">
+      <div id="tabs" class="tabs" aria-label="Open files"></div>
+      <div id="tagBar" class="tag-bar"></div>
+      <div class="editorWrap"><div id="monacoEditor" aria-label="HTML 源码编辑器"></div></div>
+    </section>
+    <div class="paneSplitter" id="previewSplitter" role="separator" tabindex="0" aria-label="调整预览宽度" aria-orientation="vertical" aria-controls="previewPane" title="拖动调整预览宽度；方向键微调；双击恢复"></div>
+    <section class="previewPane" id="previewPane" aria-label="预览">
+      <div class="bar">
+        <strong>Preview</strong>
+        <button id="refreshBtn">Refresh</button>
+        <button id="openRawBtn">Open file</button>
+      </div>
+      <iframe id="preview" sandbox="allow-scripts" hidden></iframe>
+    </section>
+  </main>
+  <footer class="statusbar"><span id="status" role="status"></span><span id="positionInfo"></span><span id="languageInfo">纯文本 · UTF-8</span><button id="layoutReset" type="button" title="恢复面板宽度和按钮尺寸">重置布局</button></footer>
+  <dialog id="closeDialog" aria-labelledby="closeMessage">
+    <form method="dialog">
+      <p id="closeMessage"></p>
+      <button value="save" autofocus>保存</button>
+      <button value="discard">不保存</button>
+      <button value="cancel">取消</button>
+    </form>
+  </dialog>
+  <script src="git-platform.js"></script>
+  <script src="/monaco/min/vs/loader.js"></script>
+  <script src="editor-core.js"></script>
+  <script src="tag-panel.js"></script>
+  <script src="index-app.js"></script>
+  <script src="editor-layout.js"></script>
+</body>
+</html>

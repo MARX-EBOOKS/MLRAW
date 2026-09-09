@@ -1,0 +1,20 @@
+/* Scope the old textarea rules away from Monaco's hidden input and widgets. */
+#monacoEditor { position: absolute; inset: 0; }
+.monaco-editor button { border-radius: 0; min-height: 0; }
+/* The app's global border-box rule makes compact Monaco tooltips wrap after
+   Monaco has measured them, so their extra line falls back over the action.
+   Keep Monaco's measured content width and let fixed overflow widgets rise
+   into the header/chrome instead of obscuring the find/replace buttons. */
+.monaco-hover.workbench-hover.compact .hover-contents {
+  box-sizing: content-box;
+  white-space: nowrap !important;
+}
+/* Monaco positions action tooltips above the find widget. Temporarily release
+   the app shells that would otherwise clip that negative top position. */
+main:has(.editorPane .workbench-hover-container),
+.editorPane:has(.workbench-hover-container) {
+  overflow: visible;
+}
+.editorPane:has(.workbench-hover-container) { z-index: 20; }
+#positionInfo { margin-left: auto; color: var(--muted); font-size: 12px; }
+#tree [role="treeitem"]:focus { outline: 1px solid var(--tag); }

@@ -1,0 +1,26 @@
+stages: [test, deploy]
+
+test-editor:
+  stage: test
+  image: node:20-alpine
+  script:
+    - node --check public/git-platform.js
+    - node --check public/app.js
+    - node --test tests/*.test.mjs
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+deploy-pages:
+  stage: deploy
+  image: node:20-alpine
+  needs: [test-editor]
+  script:
+    - mkdir -p dist/public
+    - cp git-editor.html dist/index.html
+    - cp git-editor.html dist/git-editor.html
+    - cp -R public/. dist/public/
+  pages:
+    publish: dist
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

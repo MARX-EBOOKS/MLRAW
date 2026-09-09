@@ -1,0 +1,5 @@
+test/**
+generate-mew-brief-config.mjs
+package-ready/**
+*.vsix
+node_modules/**

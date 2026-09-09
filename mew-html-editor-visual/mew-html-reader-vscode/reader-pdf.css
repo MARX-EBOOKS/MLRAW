@@ -1,0 +1,45 @@
+:root{color-scheme:light dark}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--vscode-editor-background);color:var(--vscode-editor-foreground);font:12px var(--vscode-font-family)}
+button,input{height:24px;min-height:24px;border:1px solid var(--vscode-button-border,var(--vscode-panel-border));border-radius:3px;color:var(--vscode-button-foreground);background:var(--vscode-button-background);font:inherit}
+button{padding:0 7px;cursor:pointer}
+button:hover{background:var(--vscode-button-hoverBackground)}
+button:disabled{opacity:.45;cursor:default}
+input{color:var(--vscode-input-foreground);background:var(--vscode-input-background)}
+
+#tools{position:absolute;inset:0 0 auto;z-index:5;height:34px;display:flex;align-items:center;gap:7px;padding:4px 6px;background:var(--vscode-editorWidget-background);border-bottom:1px solid var(--vscode-panel-border);overflow-x:auto;overflow-y:hidden}
+#title{min-width:72px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:auto;font-weight:600}
+.tool-group{display:flex;align-items:center;flex:none;gap:3px}
+.page-tools,.zoom-tools{gap:0}
+.page-tools>*:not(span),.zoom-tools>*{border-radius:0;margin-left:-1px}
+.page-tools button:first-child,.zoom-tools button:first-child{margin-left:0;border-radius:3px 0 0 3px}
+.page-tools button:last-child,.zoom-tools button:last-child{border-radius:0 3px 3px 0}
+.page-tools button{width:27px;padding:0;font-size:17px;line-height:1}
+.page-tools span{height:24px;margin-left:-1px;padding:4px 1px;border-block:1px solid var(--vscode-input-border,var(--vscode-panel-border));color:var(--vscode-descriptionForeground);background:var(--vscode-input-background)}
+#pageNumber{width:48px;margin-left:-1px;border-radius:0;padding:2px 3px;text-align:right;font-variant-numeric:tabular-nums}
+#pageCount{height:24px;min-width:30px;padding:4px 4px 0 1px;border-block:1px solid var(--vscode-input-border,var(--vscode-panel-border));color:var(--vscode-descriptionForeground);background:var(--vscode-input-background);font-variant-numeric:tabular-nums}
+#zoom{width:62px;border-radius:0;padding:2px 4px;text-align:center;font-variant-numeric:tabular-nums}
+
+#stage{position:absolute;inset:34px 0 0;overflow:auto;background:#777;--paper:#fff;--scan-filter:none}
+#viewer{min-width:100%;padding:12px 0}
+.pdfViewer .page{background:var(--paper)!important;box-shadow:0 3px 16px #0008}
+.pdfViewer .page canvas{filter:var(--scan-filter)}
+#status{position:absolute;z-index:6;left:50%;top:48px;transform:translateX(-50%);padding:7px 10px;border-radius:5px;background:var(--vscode-editorWidget-background);box-shadow:0 2px 10px #0007;white-space:nowrap}
+#status[hidden]{display:none}
+
+dialog{width:min(360px,calc(100vw - 32px));padding:0;overflow:hidden;background:var(--vscode-editorWidget-background);border:1px solid var(--vscode-panel-border);border-radius:8px;color:var(--vscode-editor-foreground);box-shadow:0 16px 50px #0008}
+dialog::backdrop{background:#0008}
+dialog form{display:grid;padding:0}
+dialog header,dialog footer{display:flex;align-items:center;justify-content:space-between;padding:10px 14px}
+dialog header{border-bottom:1px solid var(--vscode-panel-border)}
+dialog header button{width:26px;padding:0;font-size:18px;line-height:1}
+dialog form>label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:7px;padding:10px 14px;border-bottom:1px solid var(--vscode-panel-border);font-weight:600}
+dialog output{color:var(--vscode-descriptionForeground)}
+dialog input[type=range]{grid-column:1/-1;width:100%;accent-color:var(--vscode-focusBorder)}
+dialog input[type=color]{width:54px;height:30px;padding:2px}
+dialog .toggle{display:flex;justify-content:flex-start}
+dialog .toggle input{height:auto;min-height:0}
+dialog footer{gap:8px;background:var(--vscode-sideBar-background)}
+dialog footer button:first-child{margin-right:auto}
+
+@media(max-width:640px){#title{display:none}.tool-group:first-of-type{margin-right:auto}}

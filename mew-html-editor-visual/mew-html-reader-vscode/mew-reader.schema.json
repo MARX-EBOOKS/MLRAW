@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mew-reader.schema.json",
+  "title": "MEW Reader 配置",
+  "type": "object",
+  "properties": {
+    "title": { "type": "string" },
+    "volumes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/volume" },
+      "minItems": 1
+    }
+  },
+  "required": ["volumes"],
+  "$defs": {
+    "volume": {
+      "type": "object",
+      "properties": {
+        "id": { "type": ["string", "number"] },
+        "title": { "type": "string" },
+        "shortTitle": { "type": "string" },
+        "htmlRoot": { "type": "string" },
+        "pdf": { "type": "string" },
+        "pagePattern": { "type": "string" },
+        "pageLabel": { "type": "string" },
+        "toc": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "level": { "type": "integer", "minimum": 1, "maximum": 6 },
+              "page": { "type": "integer", "minimum": 0 }
+            },
+            "required": ["title", "level", "page"]
+          }
+        }
+      },
+      "required": ["id", "title", "htmlRoot", "pdf", "pagePattern"]
+    }
+  }
+}

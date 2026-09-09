@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MEW Git 编辑器</title>
+  <style>
+    :root{color-scheme:light dark;font:16px system-ui,sans-serif}body{max-width:720px;margin:8vh auto;padding:0 24px;line-height:1.5}form{display:grid;gap:14px;padding:24px;border:1px solid #8886;border-radius:12px}label{display:grid;gap:5px}input,select,button{box-sizing:border-box;width:100%;padding:10px;font:inherit}button{cursor:pointer;font-weight:600}.hint{color:#777;font-size:14px}code{word-break:break-all}
+  </style>
+</head>
+<body>
+  <h1>MEW Git 编辑器</h1>
+  <p>静态页面直接连接 GitHub 或 GitLab。编辑只保存在浏览器；点击“提交 PR/MR”后才创建临时分支和合并请求。</p>
+  <form id="connectForm">
+    <label>平台
+      <select id="provider"><option value="github">GitHub</option><option value="gitlab">GitLab</option></select>
+    </label>
+    <label>仓库
+      <input id="repository" required pattern="[^/?#]+(/[^/?#]+)+" title="使用 owner/repository 或 group/project 格式" placeholder="owner/repository 或 group/project">
+    </label>
+    <label>目标分支
+      <input id="branch" required value="main">
+    </label>
+    <label>限定目录（可留空）
+      <input id="root" placeholder="例如 html">
+    </label>
+    <label>API 地址
+      <input id="apiUrl" type="url" required value="https://api.github.com">
+    </label>
+    <label>访问令牌
+      <input id="token" type="password" autocomplete="off" required>
+    </label>
+    <button type="submit">进入编辑器</button>
+    <div class="hint">令牌只放入当前标签页的 <code>sessionStorage</code>，不会进入 URL、仓库或 Pages 构建产物。外部贡献者使用 GitHub fork 时，classic PAT 通常最直接；fine-grained PAT 还需要允许创建 fork。GitLab 令牌需要 <code>api</code> 权限。</div>
+  </form>
+  <script>
+    const $ = id => document.getElementById(id);
+    const apiDefaults = { github: "https://api.github.com", gitlab: "https://gitlab.com/api/v4" };
+    $("provider").onchange = () => $("apiUrl").value = apiDefaults[$("provider").value];
+    try {
+      const saved = JSON.parse(sessionStorage.getItem("mew.git.config") || "null");
+      if (saved) {
+        for (const key of ["provider", "repository", "branch", "root", "apiUrl"]) if (saved[key] != null) $(key).value = saved[key];
+      }
+    } catch {}
+    $("connectForm").onsubmit = event => {
+      event.preventDefault();
+      const config = Object.fromEntries(["provider", "repository", "branch", "root", "apiUrl"].map(key => [key, $(key).value.trim()]));
+      sessionStorage.setItem("mew.git.config", JSON.stringify(config));
+      sessionStorage.setItem("mew.git.token", $("token").value);
+      location.href = "public/index.html?git=1";
+    };
+  </script>
+</body>
+</html>

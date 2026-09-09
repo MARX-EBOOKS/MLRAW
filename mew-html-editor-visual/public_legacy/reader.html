@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%238f2923'/%3E%3Ctext x='16' y='24' text-anchor='middle' font-family='serif' font-size='25' fill='white'%3EM%3C/text%3E%3C/svg%3E">
+<title>MEW 对照阅读编辑器</title><link rel="stylesheet" href="/vendor/pdfjs/web/pdf_viewer.css"><link rel="stylesheet" href="reader.css"><link rel="stylesheet" href="reader-vscode.css"></head>
+<body>
+<header class="site-header">
+  <div class="brand"><span aria-hidden="true">M</span><span class="brand-name">MEW 对照阅读编辑器</span></div>
+  <div class="context"><strong id="chapterTitle">正在载入…</strong><div class="context-meta"><small id="pageContext"></small><output id="status" aria-live="polite" aria-atomic="true"></output></div></div>
+  <nav class="actions" aria-label="阅读与编辑工具">
+    <div class="action-group action-group-file"><select id="volumeSelect" aria-label="选择卷册" title="选择卷册"></select><button id="tocBtn" type="button" aria-controls="tocDrawer" aria-expanded="false">目录</button></div>
+    <div class="action-group action-group-page" aria-label="翻页导航"><button id="prevBtn" class="page-step" type="button" title="上一页 Alt+←" aria-label="上一页">←</button><form id="pageForm" class="page-jump" aria-label="输入页码后按回车跳转"><input id="pageInput" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" required aria-label="当前页码" placeholder="页码"><span class="page-divider" aria-hidden="true">/</span><output id="pagePosition" aria-label="总页数" aria-live="polite"></output></form><button id="nextPageBtn" class="page-step" type="button" title="下一页 Alt+→" aria-label="下一页">→</button></div>
+    <div class="action-group action-group-edit"><button id="undoBtn" type="button" title="撤销 Ctrl+Z">撤销</button><button id="redoBtn" type="button" title="重做 Ctrl+Y">重做</button><button id="saveBtn" type="button" title="保存 Ctrl+S">保存</button></div>
+    <div class="action-group action-group-view"><button id="modeBtn" type="button">源代码</button><button id="darkBtn" type="button">深色</button></div>
+  </nav>
+</header>
+<button id="tocBackdrop" class="toc-backdrop" aria-label="关闭目录"></button>
+<aside id="tocDrawer" class="toc-drawer" aria-labelledby="tocTitle"><div class="toc-header"><strong id="tocTitle">目录</strong><button id="tocClose" type="button" aria-label="关闭目录">×</button></div><ol id="tocList"></ol></aside>
+<main class="reader-grid">
+  <section class="text-pane">
+    <div id="tagBar" class="tag-bar"></div>
+    <iframe id="visualEditor" title="可视化编辑器" sandbox="allow-same-origin"></iframe>
+    <div id="sourcePane" class="source-pane" hidden>
+        <div id="findBar" class="find-bar"><textarea id="findText" rows="2" spellcheck="false" placeholder="查找文本或正则"></textarea><textarea id="replaceText" rows="2" spellcheck="false" placeholder="替换为"></textarea>
+        <label><input id="regexBox" type="checkbox" checked>正则</label><label><input id="caseBox" type="checkbox">区分大小写</label>
+        <button id="findBtn">查找</button><button id="nextBtn">下一个</button><button id="replaceBtn">替换</button><button id="allBtn">全部</button><span id="findInfo"></span>
+      </div>
+      <div class="editor-wrap"><pre id="highlight"></pre><textarea id="editor" spellcheck="false"></textarea></div>
+    </div>
+  </section>
+  <aside class="scan-pane"><div id="pdfFrame" role="region" aria-label="PDF 扫描图窗"></div></aside>
+</main>
+<script src="reader-ui.js"></script><script src="reader-app.js"></script></body></html>

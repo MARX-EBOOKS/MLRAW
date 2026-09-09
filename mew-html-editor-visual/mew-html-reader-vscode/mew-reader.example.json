@@ -1,0 +1,8 @@
+{
+  "title": "马克思恩格斯全集 第4卷",
+  "shortTitle": "第4卷",
+  "htmlRoot": "../MEW_BRIEF/4",
+  "pdf": "../马恩全集德文/mew_band04.pdf",
+  "pagePattern": "^ME04-(?<page>\\d+)\\.html?$",
+  "pageLabel": "{page}"
+}

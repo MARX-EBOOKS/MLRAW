@@ -1,4 +1,17 @@
 /* Resizable panes and VS Code-inspired dark chrome. */
+.monaco-hover.workbench-hover.compact .hover-contents {
+  box-sizing: content-box;
+  white-space: nowrap !important;
+}
+
+/* The source pane normally clips at the reader split. Release only while a
+   Monaco action tooltip exists so it can occupy the header instead. */
+.text-pane:has(.workbench-hover-container) {
+  position: relative;
+  z-index: 20;
+  overflow: visible;
+}
+
 .reader-grid {
   grid-template-columns: minmax(280px, var(--left-pane, 54%)) 6px minmax(280px, 1fr);
   gap: 0;
@@ -75,7 +88,6 @@ body.dark {
 }
 
 body.dark .tag-bar,
-body.dark .find-bar,
 body.dark .scan-tools {
   background: #252526;
 }

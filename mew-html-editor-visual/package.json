@@ -4,9 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node reader-server.js -p 17000"
+    "start": "node reader-server.js -p 17000",
+    "start:editor": "node server.js",
+    "test:monaco": "node tests/monaco-browser.mjs"
   },
   "dependencies": {
+    "monaco-editor": "0.55.1",
     "pdfjs-dist": "6.2.108"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
   }
 }
