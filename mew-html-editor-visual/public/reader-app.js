@@ -2,7 +2,10 @@
   "use strict";
   const core = window.MewEditorCore;
   if (!core) throw new Error("MewEditorCore 未载入");
-  const { DocumentModel, tags, attrs, tagMap, blockTagNames, buildTagEdit, createChannel } = core;
+  const tagPanel = window.MewTagPanel;
+  if (!tagPanel) throw new Error("MewTagPanel 未载入");
+  const { DocumentModel, createChannel } = core;
+  const { tags, attrs, tagMap, blockTagNames, buildTagEdit } = tagPanel;
   const blockSelector = [...blockTagNames].join(",");
 
   const ui = window.ReaderUI;

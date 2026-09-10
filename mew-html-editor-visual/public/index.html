@@ -16,7 +16,9 @@
     <details id="fileMenu" class="menu">
       <summary>File</summary>
       <div class="menuPanel">
+      <button id="newFileBtn" title="Create a file beside the active file (Ctrl+N)">新建文件…</button>
       <button id="saveBtn" title="Save current file">Save</button>
+      <button id="saveAsBtn" title="Save the current content beside the active file (Ctrl+Shift+S)">另存为…</button>
       <button id="saveAllBtn" title="Save all open files (Ctrl+K S)">Save all</button>
       <button id="submitChangeBtn" hidden title="Create a pull/merge request from staged changes">提交 PR/MR</button>
       <button id="gitConfigBtn" hidden title="Change Git provider or repository">切换仓库</button>
@@ -33,8 +35,8 @@
       <button id="prevFileBtn" title="切换到文件夹中的上一个文件">← 上一文件</button>
       <button id="nextFileBtn" title="切换到文件夹中的下一个文件">下一文件 →</button>
       <button id="newWinBtn" title="Open current file in a new editor window">New window</button>
-      <button id="closeSavedBtn" title="Close all saved windows">Close saved</button>
-      <button id="closeAllBtn" title="Close all open windows">Close all</button>
+      <button id="closeSavedBtn" title="Close all saved windows (Ctrl+K U)">Close saved</button>
+      <button id="closeAllBtn" title="Close all open windows (Ctrl+K W)">Close all</button>
       <button id="fullBtn" title="Toggle fullscreen">Fullscreen</button>
     </span>
   </header>
@@ -75,11 +77,25 @@
       <button value="cancel">取消</button>
     </form>
   </dialog>
+  <dialog id="fileDialog" aria-labelledby="fileDialogTitle">
+    <form id="fileDialogForm">
+      <h2 id="fileDialogTitle">新建文件</h2>
+      <p class="fileDialogDirectory">保存位置：<code id="fileDialogDirectory"></code></p>
+      <label class="fileNameField">文件名
+        <input id="fileNameInput" name="fileName" autocomplete="off" spellcheck="false" required>
+      </label>
+      <p id="fileDialogError" class="dialogError" role="alert"></p>
+      <div class="dialogActions">
+        <button id="fileDialogSubmit" type="submit">创建</button>
+        <button type="button" data-cancel>取消</button>
+      </div>
+    </form>
+  </dialog>
   <script src="git-platform.js"></script>
   <script src="/monaco/min/vs/loader.js"></script>
   <script src="editor-core.js"></script>
   <script src="tag-panel.js"></script>
-  <script src="index-app.js"></script>
-  <script src="editor-layout.js"></script>
+  <script src="ui.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

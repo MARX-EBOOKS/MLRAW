@@ -67,7 +67,10 @@ function showPending() {
   showPage(page);
   queueMicrotask(() => { syncing = false; });
 }
-function showScale() { zoom.value = viewer?.currentScale ? `${Math.round(viewer.currentScale * 100)}%` : "页宽"; }
+// Keep the control in PDF.js scale units: 1 is 100%. PDF.js applies its own
+// PDF-point-to-CSS-pixel conversion internally; that conversion is not zoom.
+function scalePercent(scale) { return Math.round(scale * 100); }
+function showScale() { zoom.value = viewer?.currentScale ? `${scalePercent(viewer.currentScale)}%` : "页宽"; }
 function showPage(number = viewer?.currentPageNumber || 1) {
   const count = viewer?.pagesCount || 0;
   pageNumber.value = String(labels?.[number - 1] ?? number);
@@ -210,7 +213,7 @@ async function init() {
     if (number === viewer.currentPageNumber) showStatus(error ? `PDF 页面渲染失败：${error.message}` : "");
   });
   eventBus.on("pagechanging", ({ pageNumber: number, pageLabel }) => { showPage(number); if (!syncing && !initializing) vscode.postMessage({ type: "pdfPageChange", pageNumber: number, pageLabel }); });
-  eventBus.on("scalechanging", ({ scale, presetValue }) => { saveState({ scale: presetValue || String(scale) }); zoom.value = `${Math.round(scale * 100)}%`; });
+  eventBus.on("scalechanging", ({ scale, presetValue }) => { saveState({ scale: presetValue || String(scale) }); zoom.value = `${scalePercent(scale)}%`; });
 
   document.querySelector("#minus").onclick = () => viewer.decreaseScale();
   document.querySelector("#plus").onclick = () => viewer.increaseScale();

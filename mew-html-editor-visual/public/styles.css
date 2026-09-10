@@ -27,6 +27,13 @@ aside { display: flex; flex-direction: column; gap: 8px; padding: 10px; backgrou
 dialog { max-width: min(560px, 90vw); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--panel); }
 dialog p { overflow-wrap: anywhere; }
 dialog::backdrop { background: #0006; }
+.fileDialogDirectory { color: var(--muted); font-size: 13px; }
+.fileDialogDirectory code { color: var(--ink); }
+.fileNameField { display: grid; gap: 6px; color: var(--ink); }
+.fileNameField input { width: min(420px, 75vw); }
+.dialogError { min-height: 1.25em; margin: 8px 0; color: #c62828; font-size: 13px; }
+body.dark .dialogError { color: #ff8a80; }
+.dialogActions { display: flex; justify-content: flex-end; gap: 8px; }
 .indent { margin-left: 14px; border-left: 1px solid var(--line); padding-left: 4px; }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editorPane, .previewPane { display: flex; flex-direction: column; }

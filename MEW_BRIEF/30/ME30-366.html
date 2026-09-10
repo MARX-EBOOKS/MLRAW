@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Tableau Économique des Dr. Quesnay</title>
+<style>
+body { margin: 0; padding: 24px; color: #111; background: #fff; font-family: Georgia, "Times New Roman", serif; }
+.page { width: 755px; margin: 0 auto; }
+h1 { margin: 0 0 18px; text-align: center; font-size: 22px; font-weight: 700; }
+.diagram { position: relative; width: 755px; height: 1015px; font-size: 18px; font-weight: 700; }
+.diagram svg { position: absolute; inset: 0; width: 755px; height: 1015px; z-index: 0; overflow: visible; }
+.label { position: absolute; z-index: 1; white-space: nowrap; text-align: center; line-height: 1.2; }
+.label .term { text-decoration: underline; }
+.label .value { display: block; margin-top: 3px; font-weight: 400; }
+.label .value sup, .fraction sup { font-size: .68em; line-height: 0; vertical-align: .48em; }
+.label .value sub, .fraction sub { font-size: .68em; line-height: 0; vertical-align: -.18em; }
+.section { font-size: 19px; }
+.i { left: 258px; top: 112px; }
+.wages-top { left: 345px; top: 17px; }
+.industry-top { left: 495px; top: 25px; }
+.interest-top { left: 620px; top: 25px; }
+.rent-top { left: 694px; top: 58px; }
+.profit-top { left: 550px; top: 66px; }
+.constant-i { left: 108px; top: 174px; }
+.variable-i { left: 275px; top: 174px; }
+.surplus-i { left: 480px; top: 174px; }
+.product-i { left: 665px; top: 174px; }
+.wages-mid { left: 425px; top: 278px; }
+.industry-mid { left: 478px; top: 312px; }
+.interest-mid { left: 610px; top: 312px; }
+.rent-mid { left: 678px; top: 312px; }
+.profit-mid { left: 527px; top: 347px; }
+.ii { left: 146px; top: 365px; }
+.constant-ii { left: 113px; top: 438px; }
+.variable-ii { left: 294px; top: 438px; }
+.surplus-ii { left: 487px; top: 438px; }
+.product-ii { left: 669px; top: 438px; }
+.iii { left: 250px; top: 512px; }
+.constant-iii { left: 113px; top: 573px; }
+.variable-iii { left: 293px; top: 573px; }
+.surplus-iii { left: 490px; top: 573px; }
+.product-iii { left: 664px; top: 573px; }
+.seven-hundred { left: 432px; top: 535px; font-weight: 400; }
+.quesnay { position: absolute; left: 0; right: 0; top: 684px; text-align: center; font-size: 20px; }
+.quesnay-title { display: inline-block; text-decoration: underline; }
+.classes { position: absolute; left: 70px; top: 743px; width: 650px; border-collapse: separate; border-spacing: 0 11px; font-size: 17px; }
+.classes th { text-decoration: underline; font-size: 17px; padding: 0 16px 2px; }
+.classes td { text-align: center; white-space: nowrap; padding: 0 16px; }
+.classes th:first-child, .classes td:first-child { width: 220px; }
+.classes th:nth-child(2), .classes td:nth-child(2) { width: 190px; }
+.classes th:last-child, .classes td:last-child { width: 240px; }
+.classes .under { text-decoration: underline; }
+.total { position: absolute; top: 928px; right: 28px; font-size: 17px; }
+.advances { position: absolute; top: 952px; left: 76px; font-size: 17px; line-height: 1.55; }
+.advances .under { text-decoration: underline; }
+</style>
+</head>
+<body>
+<main class="page">
+<h1>Tableau Économique des Dr. Quesnay</h1>
+<section class="diagram" aria-label="Tableau économique avec drei Produktionsstufen und Quesnays Wirtschaftstabelle">
+<svg viewBox="0 0 755 1015" aria-hidden="true">
+  <g fill="none" stroke="#111" stroke-width="2.6" stroke-linecap="round">
+    <path d="M394 48 C370 75 350 111 324 176" stroke-dasharray="15 11"/>
+    <path d="M393 49 C478 83 573 123 675 194"/>
+    <path d="M597 58 L558 106 L674 194"/>
+    <path d="M657 57 L656 192"/>
+    <path d="M720 86 L674 194"/>
+    <path d="M557 106 L674 194"/>
+    <path d="M203 207 L504 247"/>
+    <path d="M339 207 L504 247" stroke-dasharray="15 11"/>
+    <path d="M544 207 L674 213"/>
+    <path d="M674 213 L720 211"/>
+    <path d="M674 194 L557 355" stroke-dasharray="15 11"/>
+    <path d="M674 194 L611 327" stroke-dasharray="15 11"/>
+    <path d="M674 194 L695 327" stroke-dasharray="15 11"/>
+    <path d="M674 194 L547 385"/>
+    <path d="M203 207 L661 459"/>
+    <path d="M439 293 L330 455" stroke-dasharray="15 11"/>
+    <path d="M547 385 L505 459" stroke-dasharray="15 11"/>
+    <path d="M611 327 L553 459" stroke-dasharray="15 11"/>
+    <path d="M695 327 L656 459" stroke-dasharray="15 11"/>
+    <path d="M208 473 L525 524"/>
+    <path d="M356 473 L525 524" stroke-dasharray="15 11"/>
+    <path d="M547 473 L525 524"/>
+    <path d="M661 473 L395 548"/>
+    <path d="M525 524 L495 610"/>
+    <path d="M661 473 L395 548"/>
+    <path d="M208 610 L495 575"/>
+    <path d="M356 610 L495 575" stroke-dasharray="15 11"/>
+    <path d="M547 610 L495 575"/>
+    <path d="M661 610 L495 575"/>
+    <path d="M310 774 C390 786 475 820 586 878" stroke-dasharray="13 10"/>
+    <path d="M310 830 C395 816 475 790 586 774" stroke-dasharray="13 10"/>
+    <path d="M310 885 C398 865 490 815 586 830" stroke-dasharray="13 10"/>
+    <path d="M310 940 C400 920 493 875 586 885" stroke-dasharray="13 10"/>
+    <path d="M488 774 C530 790 557 820 586 830" stroke-dasharray="13 10"/>
+  </g>
+</svg>
+<div class="label section i">I) <span class="term">Lebensmittel</span></div>
+<div class="label wages-top"><span class="term">Arbeitslohn</span><span class="value">100</span></div>
+<div class="label industry-top"><span class="term">Indust. Profit</span></div>
+<div class="label interest-top"><span class="term">Zins</span></div>
+<div class="label rent-top"><span class="term">Rente</span></div>
+<div class="label profit-top"><span class="term">Profit</span><span class="value">200</span></div>
+<div class="label constant-i"><span class="term">konstantes Kapital</span><span class="value">400</span></div>
+<div class="label variable-i"><span class="term">variables Kapital</span><span class="value">100</span></div>
+<div class="label surplus-i"><span class="term">Mehrwert</span><span class="value">200</span></div>
+<div class="label product-i"><span class="term">Produkt</span><span class="value">700</span></div>
+<div class="label wages-mid"><span class="term">Arbeitslohn</span></div>
+<div class="label industry-mid"><span class="term">Indust. Profit</span></div>
+<div class="label interest-mid"><span class="term">Zins</span></div>
+<div class="label rent-mid"><span class="term">Rente</span></div>
+<div class="label profit-mid"><span class="term">Profit</span></div>
+<div class="label section ii">II) <span class="term">Maschinerie und Rohstoffe</span></div>
+<div class="label constant-ii"><span class="term">konstantes Kapital</span><span class="value fraction">533<sup>1</sup>/<sub>3</sub></span></div>
+<div class="label variable-ii"><span class="term">variables Kapital</span><span class="value fraction">133<sup>1</sup>/<sub>3</sub></span></div>
+<div class="label surplus-ii"><span class="term">Mehrwert</span><span class="value fraction">266<sup>2</sup>/<sub>3</sub></span></div>
+<div class="label product-ii"><span class="term">Produkt</span><span class="value fraction">933<sup>1</sup>/<sub>3</sub></span></div>
+<div class="label section iii">III) <span class="term">Gesamtprodukt</span></div>
+<div class="label seven-hundred">700</div>
+<div class="label constant-iii"><span class="term">konstantes Kapital</span><span class="value fraction">933<sup>1</sup>/<sub>3</sub></span></div>
+<div class="label variable-iii"><span class="term">variables Kapital</span><span class="value fraction">233<sup>1</sup>/<sub>3</sub></span></div>
+<div class="label surplus-iii"><span class="term">Mehrwert</span><span class="value fraction">466<sup>2</sup>/<sub>3</sub></span></div>
+<div class="label product-iii"><span class="term">Produkt</span><span class="value fraction">1633<sup>1</sup>/<sub>3</sub></span></div>
+<div class="quesnay"><span class="quesnay-title">Tableau Économique des Dr. Quesnay</span></div>
+<table class="classes" aria-label="Tableau Économique des Dr. Quesnay">
+<thead><tr><th>Produktive Klasse</th><th>Eigentümer</th><th>unproduktive Klasse</th></tr></thead>
+<tbody>
+<tr><td>a) <span class="under">2 Milliarden</span></td><td>e) <span class="under">2 Milliarden</span></td><td><span class="under">1 Milliarde</span> f)</td></tr>
+<tr><td>b) <span class="under">1 Milliarde</span></td><td></td><td><span class="under">1 Milliarde</span> g)</td></tr>
+<tr><td>c) <span class="under">1 Milliarde</span></td><td></td><td><span class="under">1 Milliarde</span> h)</td></tr>
+<tr><td>d) <span class="under">1 Milliarde</span></td><td></td><td></td></tr>
+</tbody>
+</table>
+<div class="total">insgesamt 2 Milliarden.</div>
+<div class="advances"><span class="under">Jährliche Vorschüsse</span>&nbsp;&nbsp; 2 Milliarden<br><span class="under">Insgesamt</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5 Milliarden</div>
+</section>
+</main>
+</body>
+</html>
