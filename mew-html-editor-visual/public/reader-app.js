@@ -25,6 +25,9 @@
     navigationRevision: 0,
     pendingPdfNavigation: null
   };
+  let currentPdfPage = null;
+  let directoryRefreshTimer;
+  let directoryRefreshRevision = 0;
   let syncChannel = null;
   let pairedWindow = null;
   let locateRevision = 0;
@@ -271,6 +274,7 @@
       // PDF 发起的翻页已经处于正确的物理页，不反向驱动 PDF。
       // 左侧网页发起导航时才定位 PDF；UI 会在重复标签中选择离当前物理页最近的一项。
       if (!pdfOrigin) {
+        currentPdfPage = { volume: volume.id, pageLabel: String(page) };
         ui.setPdf({ url: volume.pdfUrl, pageLabel: String(page) })
           .catch((error) => ui.notify(`PDF 载入失败：${error.message}`, true));
       }
@@ -598,6 +602,7 @@
         updateWorkingCopy();
         const volume = currentVolume();
         if (!volume) return;
+        currentPdfPage = { volume: volume.id, pageNumber, pageLabel };
         const prefix = String(pageLabel ?? "").match(/^(\d+)/)?.[1];
         if (!prefix) return;
         const page = Number(prefix);
@@ -643,8 +648,45 @@
     }
   }
 
+  async function refreshDirectory() {
+    const revision = ++directoryRefreshRevision;
+    const config = await api("/api/reader/config");
+    if (revision !== directoryRefreshRevision || !state.config) return;
+    state.config = config;
+    editorPathCache.clear();
+    ui.renderVolumes(config.volumes, state.volume);
+    renderNavigation();
+    const origin = currentPdfPage;
+    if (!origin || origin.volume !== state.volume) return;
+    const prefix = String(origin.pageLabel ?? "").match(/^(\d+)/)?.[1];
+    if (!prefix) return;
+    const requested = Number(prefix);
+    const page = currentVolume()?.pages.filter(page => page <= requested).at(-1);
+    if (page === state.page) return;
+    updateWorkingCopy();
+    if (state.document.dirty) {
+      state.pendingPdfNavigation = { volume: state.volume, page: requested, pdfOrigin: origin };
+      ui.notify("目录已变化；网页有未保存修改，保存后将匹配当前 PDF 页");
+      return;
+    }
+    if (page == null) {
+      ui.notify("当前 PDF 页及之前没有可用的网页文件", true);
+      return;
+    }
+    await navigate(state.volume, requested, false, origin);
+  }
+
+  const directoryEvents = new EventSource("/api/events");
+  directoryEvents.onmessage = event => {
+    const change = JSON.parse(event.data);
+    if (change.event === "change" || change.event === "rename") refreshLocalFile();
+    if (change.event !== "rename" && change.event !== "ready") return;
+    clearTimeout(directoryRefreshTimer);
+    directoryRefreshTimer = setTimeout(() => refreshDirectory().catch(error => ui.notify(error.message, true)), 120);
+  };
+  window.addEventListener("pagehide", () => directoryEvents.close());
+
   window.addEventListener("focus", refreshLocalFile);
   document.addEventListener("visibilitychange", refreshLocalFile);
-  setInterval(refreshLocalFile, 2000);
   init();
 })();

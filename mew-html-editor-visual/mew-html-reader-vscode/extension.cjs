@@ -26,7 +26,8 @@ const tags = [
   { id: "span", label: "SPAN", open: "<span>", close: "</span>", title: "Alt+S" },
   { id: "aside", label: "ASIDE", open: "<aside>", close: "</aside>", title: "Aside" },
   { id: "sup", label: "SUP", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
-  { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" }
+  { id: "sub", label: "SUB", open: "<sub>", close: "</sub>", title: "Insert Subscript" },
+  { id: "u", label: "U", open: "<u>", close: "</u>", title: "Insert Underline" }
 ];
 
 const attrs = [
@@ -36,7 +37,8 @@ const attrs = [
   { id: "hrs", label: "HRS", text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
   { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" },
   { id: "HR", label: "HR", text: "<hr>", cursorOffset: 3, title: "Insert hardline" },
-  { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" }
+  { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" },
+  { id: "SUPdSUB", label: "SUP/SUB", text: "<sup></sup>/<sub></sub>", cursorOffset: 5, title: "Insert division" }
 ];
 const nav = [
   { type: "openPreviousFile", id: "openPreviousFile", label: "←", title: "Open Previous File in Folder" },
@@ -216,6 +218,7 @@ function activate(context) {
   }));
 
   const provider = new TagBarViewProvider(context);
+  context.subscriptions.push(vscode.window.registerWebviewPanelSerializer("mewReader.floatingBar", provider));
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("mewReader.bar", provider, {
       webviewOptions: { retainContextWhenHidden: true }
@@ -226,7 +229,8 @@ function activate(context) {
     webviewOptions: { retainContextWhenHidden: true }
   }));
   context.subscriptions.push(
-    vscode.commands.registerCommand("mewReader.showBar", showTagBar),
+    vscode.commands.registerCommand("mewReader.showBar", () => provider.panel ? provider.openFloating() : provider.showDocked()),
+    vscode.commands.registerCommand("mewReader.openFloatingBar", () => provider.openFloating()),
     vscode.commands.registerCommand("mewReader.openPdf", () => reader.open()),
     vscode.commands.registerCommand("mewReader.openPreviousPage", () => openSiblingFile(-1)),
     vscode.commands.registerCommand("mewReader.openNextPage", () => openSiblingFile(1))
@@ -332,7 +336,7 @@ async function siblingFiles(currentUri, parentUri) {
 }
 
 function sameUri(one, other) {
-  return one.toString(true) === other.toString(true);
+  return Boolean(one && other && one.toString(true) === other.toString(true));
 }
 
 // —— 与 VS Code 资源管理器文件列表一致的排序（约 30 行）——
@@ -374,6 +378,7 @@ async function showTagBar() {
 
 function targetEditor() {
   const editor = vscode.window.activeTextEditor || lastEditor;
+  if (editor?.document.isClosed) return undefined;
   if (editor) lastEditor = editor;
   return editor;
 }
@@ -461,7 +466,58 @@ class TagBarViewProvider {
   resolveWebviewView(view) {
     view.webview.options = { enableScripts: true };
     view.webview.html = renderBar(view.webview);
-    view.webview.onDidReceiveMessage(handleBarMessage, null, this.context.subscriptions);
+    view.webview.onDidReceiveMessage(message => this.handleMessage(message), null, this.context.subscriptions);
+  }
+
+  handleMessage(message) {
+    if (message?.type === "openFloatingBar") return this.openFloating();
+    if (message?.type === "showDockedBar") return this.showDocked();
+    return handleBarMessage(message);
+  }
+
+  async showDocked() {
+    await vscode.commands.executeCommand("setContext", "mewReader.floating", false);
+    this.panel?.dispose();
+    await showTagBar();
+  }
+
+  async attachPanel(panel) {
+    this.panel = panel;
+    this.context.subscriptions.push(panel);
+    panel.onDidDispose(() => {
+      if (this.panel !== panel) return;
+      this.panel = undefined;
+      vscode.commands.executeCommand("setContext", "mewReader.floating", false);
+    });
+    panel.webview.options = { enableScripts: true };
+    panel.webview.onDidReceiveMessage(message => this.handleMessage(message));
+    panel.webview.html = renderBar(panel.webview, true);
+    await vscode.commands.executeCommand("setContext", "mewReader.floating", true);
+  }
+
+  async deserializeWebviewPanel(panel) {
+    if (this.panel) {
+      panel.dispose();
+      return;
+    }
+    await this.attachPanel(panel);
+  }
+
+  async openFloating() {
+    if (this.panel) {
+      this.panel.reveal(this.panel.viewColumn, false);
+      await vscode.commands.executeCommand("workbench.action.focusWindow");
+      return;
+    }
+    const panel = vscode.window.createWebviewPanel("mewReader.floatingBar", "MEW 标签插入栏",
+      vscode.ViewColumn.Beside, { enableScripts: true, retainContextWhenHidden: true });
+    await this.attachPanel(panel);
+    try {
+      await vscode.commands.executeCommand("workbench.action.moveEditorToNewWindow");
+      await vscode.commands.executeCommand("workbench.action.enableCompactAuxiliaryWindow");
+    } catch (error) {
+      vscode.window.showWarningMessage(`标签栏已打开，另窗或紧密模式未能自动设置：${error.message || error}`);
+    }
   }
 }
 
@@ -478,7 +534,7 @@ function handleBarMessage(message) {
   if (message.type === "openPreviousFile") openSiblingFile(-1);
   if (message.type === "openNextFile") openSiblingFile(1);
 }
-function renderBar(webview) {
+function renderBar(webview, floating = false) {
   const nonce = String(Date.now());
   const tagButtons = tags.map(tag => buttonHtml("insertTag", tag)).join("");
   const attrButtons = attrs.map(attr => buttonHtml("insertAttr", attr, "attr")).join("");
@@ -498,7 +554,7 @@ function renderBar(webview) {
       color: var(--vscode-foreground);
       background: var(--vscode-panel-background, var(--vscode-editor-background));
       font: 12px var(--vscode-font-family);
-      overflow: hidden;
+      overflow: auto;
     }
     .bar {
       display: flex;
@@ -532,9 +588,11 @@ function renderBar(webview) {
     ${attrButtons}
     <span class="spacer"></span>
     ${navButtons}
+    ${floating ? '<button class="attr" data-type="showDockedBar" title="关闭独立窗口，返回原停靠位置">返回标签栏 ↙</button>' : '<button class="attr" data-type="openFloatingBar" title="在独立窗口打开标签栏；可在窗口标题栏开启置顶">另窗打开 ↗</button>'}
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+    if (${floating}) vscode.setState({ floating: true });
     document.addEventListener("click", event => {
       const button = event.target.closest("button");
       if (!button) return;
@@ -580,13 +638,52 @@ class ReaderController {
     const current = await this.resolvePage(uri);
     if (!current) return false;
     this.current = current;
+    this.watchVolume(current.volume);
+    if (this.pdfNavigationTarget && sameUri(uri, this.pdfNavigationTarget)) return true;
+    this.pdfPageLabel = String(current.page);
     this.restoredDocument = null;
     const autoOpen = vscode.workspace.getConfiguration("mewReader", uri).get("autoOpenPdf", true);
     if (!this.panel && !autoOpen && !forceOpen) return true;
     if (!this.panel || !sameUri(this.panelPdfUri, current.volume.pdfUri)) await this.createPanel(current);
-    this.panel.title = path.basename(current.volume.pdfUri.fsPath || current.volume.pdfUri.path);
+    // openWith can return before a restored custom editor is attached. Its
+    // resolver owns the title; the ready handshake sends the pending current.
     await this.sendCurrent();
     return true;
+  }
+
+  watchVolume(volume) {
+    const key = volume.directoryUri.toString();
+    if (this.watchedDirectory === key) return;
+    this.fileWatcher?.dispose();
+    this.watchedDirectory = key;
+    const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(volume.directoryUri, "*"));
+    this.fileWatcher = watcher;
+    const changed = () => {
+      clearTimeout(this.directoryTimer);
+      this.directoryTimer = setTimeout(() => this.refreshVolume().catch(this.report), 120);
+    };
+    watcher.onDidCreate(changed);
+    watcher.onDidDelete(changed);
+    this.context.subscriptions.push(watcher, { dispose: () => clearTimeout(this.directoryTimer) });
+  }
+
+  async refreshVolume() {
+    const current = this.current;
+    if (!current || !this.panel) return;
+    const volume = current.volume;
+    const entries = await vscode.workspace.fs.readDirectory(volume.directoryUri);
+    if (this.current !== current) return;
+    const files = new Map();
+    for (const [name, type] of entries) {
+      if (type & vscode.FileType.Directory) continue;
+      const page = pageFromName(name, volume.pattern);
+      if (page != null && (!volume.explicitPages.length || volume.explicitPages.includes(page))) {
+        files.set(page, vscode.Uri.joinPath(volume.directoryUri, name));
+      }
+    }
+    volume.files = files;
+    volume.pages = [...files.keys()].sort((a, b) => a - b);
+    await this.onPdfPage({ pageLabel: this.pdfPageLabel ?? String(current.page) });
   }
 
   async open() {
@@ -596,7 +693,7 @@ class ReaderController {
       vscode.window.showInformationMessage("当前 HTML 不在 MEW Reader JSON 配置中。");
       return;
     }
-    if (existing) this.panel.reveal(this.panel.viewColumn, false);
+    if (existing && this.panel) this.panel.reveal(this.panel.viewColumn, false);
   }
 
   async navigate(direction) {
@@ -622,10 +719,14 @@ class ReaderController {
   async onPdfPage(message) {
     const current = this.current;
     if (!current) return;
+    this.pdfPageLabel = message.pageLabel;
     const requested = pageFromPdfLabel(message.pageLabel);
     const page = requested == null ? null : pageAtOrBefore(current.volume.pages, requested);
     if (page == null || page === current.page) return;
-    await this.openHtmlPage(current, page);
+    const target = current.volume.files.get(page);
+    this.pdfNavigationTarget = target;
+    try { await this.openHtmlPage(current, page); }
+    finally { if (this.pdfNavigationTarget === target) this.pdfNavigationTarget = null; }
   }
 
   async createPanel(current) {
@@ -648,7 +749,6 @@ class ReaderController {
 
   resolveCustomEditor(document, panel) {
     if (this.current && !sameUri(this.current.volume.pdfUri, document.uri)) this.current = null;
-    this.panelPdfUri = document.uri;
     panel.title = path.basename(document.uri.fsPath || document.uri.path);
     this.attachPanel(panel, {
       pdfUri: document.uri.toString(true),
@@ -663,17 +763,18 @@ class ReaderController {
     this.ready = false;
     this.restoredDocument = restoredDocument;
     const pdfUri = restoredDocument?.pdfUri ? vscode.Uri.parse(restoredDocument.pdfUri) : this.current?.volume.pdfUri;
+    this.panelPdfUri = pdfUri ?? null;
     panel.webview.options = {
       enableScripts: true,
       localResourceRoots: this.resourceRoots(pdfUri)
     };
-    panel.webview.html = this.pdfHtml(panel.webview);
     // Bind byte access to this custom editor's file, never to a webview-supplied
     // path. Binary postMessage bypasses the webview resource service worker.
     let disposed = false;
     let reading;
     const readController = new AbortController();
     panel.webview.onDidReceiveMessage(message => {
+      if (disposed || this.panel !== panel) return;
       if (message?.type === "pdfDataRequest" && Number.isSafeInteger(message.id) && pdfUri?.scheme === "file") {
         reading ||= statLocalFile(pdfUri.fsPath).then(info => info.size <= 128 * 1024 * 1024
           ? readLocalFile(pdfUri.fsPath, { signal: readController.signal }) : null);
@@ -688,7 +789,7 @@ class ReaderController {
       if (message?.type === "ready") {
         this.ready = true;
         this.acceptRestoredDocument(message.document);
-        this.sendCurrent();
+        this.sendCurrent().catch(this.report);
       }
       if (message?.type === "pdfPageChange") this.onPdfPage(message).catch(this.report);
       if (message?.type === "pdfDisplaySettings") {
@@ -704,6 +805,8 @@ class ReaderController {
       this.restoredDocument = null;
       this.panelPdfUri = null;
     }, null, this.context.subscriptions);
+    // Register the handshake before starting the webview, including restoration.
+    panel.webview.html = this.pdfHtml(panel.webview);
   }
 
   acceptRestoredDocument(value) {

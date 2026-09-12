@@ -282,7 +282,7 @@
     };
     let oldLayout = {};
     try { oldLayout = JSON.parse(localStorage.getItem('mew-editor-layout-v1') || '{}'); } catch {}
-    window.MewTagPanel.mount({
+    const tagPanel = window.MewTagPanel.mount({
       content: '#tagBar',
       host: '.editorPane',
       storageKey,
@@ -293,6 +293,12 @@
         onEditorScale(scale);
       },
       editorSelector: '#monacoEditor'
+    });
+    $('tagPanelToggle').addEventListener('click', () => {
+      const visible = tagPanel.panel.hidden;
+      tagPanel.setVisible(visible);
+      $('tagPanelToggle').textContent = `${visible ? '隐藏' : '打开'}标签编辑框`;
+      $('tagPanelToggle').setAttribute('aria-expanded', String(visible));
     });
   }
 

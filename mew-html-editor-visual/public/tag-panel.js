@@ -21,7 +21,8 @@
     { id: "span", label: "SPAN", shortcut: "s", open: "<span>", close: "</span>", title: "Alt+S / s" },
     { id: "aside", label: "ASIDE", shortcut: "aside", open: "<aside>", close: "</aside>", title: "Aside" },
     { id: "sup", label: "SUP", shortcut: "sup", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
-    { id: "sub", label: "SUB", shortcut: "sub", open: "<sub>", close: "</sub>", title: "Insert Subscript" }
+    { id: "sub", label: "SUB", shortcut: "sub", open: "<sub>", close: "</sub>", title: "Insert Subscript" },
+    { id: "u", label: "U", open: "<u>", close: "</u>", title: "Insert Underline" }
   ];
   const attrs = [
     { id: "idAttr", label: "ID=", text: " id=\"\"", cursorOffset: 5, title: "Insert id attribute" },
@@ -30,7 +31,8 @@
     { id: "hrs", label: "HRS", text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
     { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" },
     { id: "HR", label: "HR", text: "<hr>", cursorOffset: 3, title: "Insert hardline" },
-    { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" }
+    { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" },
+    { id: "SUPdSUB", label: "SUP/SUB", text: "<sup></sup>/<sub></sub>", cursorOffset: 5, title: "Insert division" }
   ];
   const tagMap = new Map(tags.filter(tag => tag.shortcut).map(tag => [tag.shortcut.toLowerCase(), tag]));
   const blockTagNames = new Set(["p", "div", "h1", "h2", "h3", "h4", "h5", "h6"]);
@@ -391,7 +393,11 @@
     window.addEventListener(options.chromeResizeEvent || "reader-chrome-resize", updateWindowDock);
     for (const eventName of options.layoutEvents || []) window.addEventListener(eventName, updateWindowDock);
     window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, h: null, scale: 1 }); updateScale("editor"); apply(); save(); });
-    return { panel, setDock, setScale, state };
+    const setVisible = visible => {
+      panel.hidden = !visible;
+      updateWindowDock();
+    };
+    return { panel, setDock, setScale, setVisible, state };
   }
   window.MewTagPanel = { mount, tags, attrs, tagMap, blockTagNames, buildTagEdit, applyTag, insert };
 })();

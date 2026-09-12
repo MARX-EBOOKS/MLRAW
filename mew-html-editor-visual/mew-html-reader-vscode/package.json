@@ -8,10 +8,11 @@
   "engines": { "vscode": "^1.95.0" },
   "categories": ["Other", "Visualization"],
   "main": "./extension.cjs",
-  "activationEvents": ["onStartupFinished", "onCustomEditor:mewReader.pdf"],
+  "activationEvents": ["onStartupFinished", "onCustomEditor:mewReader.pdf", "onWebviewPanel:mewReader.floatingBar"],
   "contributes": {
     "commands": [
       { "command": "mewReader.showBar", "title": "MEW Reader: Show Tag Bar", "icon": "media/tag.svg" },
+      { "command": "mewReader.openFloatingBar", "title": "MEW Reader: 在新窗口打开标签插入栏", "icon": "$(link-external)" },
       { "command": "mewReader.openPdf", "title": "MEW Reader: Open Synchronized PDF", "icon": "$(preview)" },
       { "command": "mewReader.openPreviousPage", "title": "MEW Reader: Previous HTML/PDF Page", "icon": "$(arrow-left)" },
       { "command": "mewReader.openNextPage", "title": "MEW Reader: Next HTML/PDF Page", "icon": "$(arrow-right)" },
@@ -60,7 +61,7 @@
       "priority": "option"
     }],
     "viewsContainers": { "panel": [{ "id": "mewReader", "title": "HTML Tags", "icon": "media/tag.svg" }] },
-    "views": { "mewReader": [{ "type": "webview", "id": "mewReader.bar", "name": "Tag Bar", "visibility": "visible" }] },
+    "views": { "mewReader": [{ "type": "webview", "id": "mewReader.bar", "name": "Tag Bar", "visibility": "visible", "when": "!mewReader.floating" }] },
     "keybindings": [
       { "command": "mewReader.openPreviousPage", "key": "alt+pageup", "when": "editorTextFocus" },
       { "command": "mewReader.openNextPage", "key": "alt+pagedown", "when": "editorTextFocus" },
@@ -84,7 +85,9 @@
       { "command": "mewReader.insert.div", "key": "alt+d", "when": "editorTextFocus" },
       { "command": "mewReader.insert.span", "key": "alt+s", "when": "editorTextFocus" }
     ],
-    "menus": { "editor/title": [
+    "menus": { "view/title": [
+      { "command": "mewReader.openFloatingBar", "when": "view == mewReader.bar", "group": "navigation" }
+    ], "editor/title": [
       { "command": "mewReader.openPreviousPage", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@1" },
       { "command": "mewReader.openNextPage", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@2" },
       { "command": "mewReader.openPdf", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@3" },
