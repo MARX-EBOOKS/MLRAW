@@ -160,6 +160,22 @@
       const selection = this.editor.getSelection(), model = this.model;
       return selection && model ? { start: model.getOffsetAt(selection.getStartPosition()), end: model.getOffsetAt(selection.getEndPosition()) } : { start: 0, end: 0 };
     }
+    selections() {
+      return (this.editor.getSelections() || []).map(selection => ({
+        start: this.model.getOffsetAt(selection.getStartPosition()),
+        end: this.model.getOffsetAt(selection.getEndPosition())
+      }));
+    }
+    replaceRanges(edits, selections, origin) {
+      const model = this.model;
+      this.editor.pushUndoStop();
+      this.editor.executeEdits(origin, edits.map(edit => ({
+        range: this.api.Range.fromPositions(model.getPositionAt(edit.start), model.getPositionAt(edit.end)),
+        text: edit.text, forceMoveMarkers: true
+      })), () => selections.map(selection => this.api.Selection.fromPositions(
+        model.getPositionAt(selection.start), model.getPositionAt(selection.end))));
+      this.editor.pushUndoStop();
+    }
     setSelection(start, end = start) {
       this.editor.setSelection(this.api.Selection.fromPositions(this.model.getPositionAt(start), this.model.getPositionAt(end)));
     }

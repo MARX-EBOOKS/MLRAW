@@ -3,98 +3,388 @@
   "displayName": "MEW HTML / PDF Reader",
   "publisher": "lldd1226",
   "description": "MEW HTML tag editing with a synchronized PDF.js editor tab.",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "private": true,
-  "engines": { "vscode": "^1.95.0" },
-  "categories": ["Other", "Visualization"],
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
   "main": "./extension.cjs",
-  "activationEvents": ["onStartupFinished", "onCustomEditor:mewReader.pdf", "onWebviewPanel:mewReader.floatingBar"],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCustomEditor:mewReader.pdf",
+    "onWebviewPanel:mewReader.floatingBar"
+  ],
   "contributes": {
     "commands": [
-      { "command": "mewReader.showBar", "title": "MEW Reader: Show Tag Bar", "icon": "media/tag.svg" },
-      { "command": "mewReader.openFloatingBar", "title": "MEW Reader: 在新窗口打开标签插入栏", "icon": "$(link-external)" },
-      { "command": "mewReader.openPdf", "title": "MEW Reader: Open Synchronized PDF", "icon": "$(preview)" },
-      { "command": "mewReader.openPreviousPage", "title": "MEW Reader: Previous HTML/PDF Page", "icon": "$(arrow-left)" },
-      { "command": "mewReader.openNextPage", "title": "MEW Reader: Next HTML/PDF Page", "icon": "$(arrow-right)" },
-      { "command": "mewReader.insert.b", "title": "MEW Tags: Insert Bold" },
-      { "command": "mewReader.insert.i", "title": "MEW Tags: Insert Italic" },
-      { "command": "mewReader.insert.em", "title": "MEW Tags: Insert Emphasis" },
-      { "command": "mewReader.insert.q", "title": "MEW Tags: Insert Blockquote" },
-      { "command": "mewReader.insert.a", "title": "MEW Tags: Insert Anchor" },
-      { "command": "mewReader.insert.x", "title": "MEW Tags: Insert ID Anchor" },
-      { "command": "mewReader.insert.l", "title": "MEW Tags: Insert HREF" },
-      { "command": "mewReader.insert.f", "title": "MEW Tags: Insert Footnote" },
-      { "command": "mewReader.insert.r", "title": "MEW Tags: Insert Right Paragraph" },
-      { "command": "mewReader.insert.c", "title": "MEW Tags: Insert Center Paragraph" },
-      { "command": "mewReader.insert.h1", "title": "MEW Tags: Insert H1" },
-      { "command": "mewReader.insert.h2", "title": "MEW Tags: Insert H2" },
-      { "command": "mewReader.insert.h3", "title": "MEW Tags: Insert H3" },
-      { "command": "mewReader.insert.h4", "title": "MEW Tags: Insert H4" },
-      { "command": "mewReader.insert.h5", "title": "MEW Tags: Insert H5" },
-      { "command": "mewReader.insert.h6", "title": "MEW Tags: Insert H6" },
-      { "command": "mewReader.insert.p", "title": "MEW Tags: Insert Paragraph" },
-      { "command": "mewReader.insert.div", "title": "MEW Tags: Insert DIV" },
-      { "command": "mewReader.insert.span", "title": "MEW Tags: Insert SPAN" },
-      { "command": "mewReader.insert.aside", "title": "MEW Tags: Insert ASIDE" },
-      { "command": "mewReader.insert.sup", "title": "MEW Tags: Insert SUP" },
-      { "command": "mewReader.insert.sub", "title": "MEW Tags: Insert SUB" },
-      { "command": "mewReader.insert.idAttr", "title": "MEW Tags: Insert ID Attribute" },
-      { "command": "mewReader.insert.classAttr", "title": "MEW Tags: Insert CLASS Attribute" },
-      { "command": "mewReader.insert.styleAttr", "title": "MEW Tags: Insert STYLE Attribute" },
-      { "command": "mewReader.insert.noIndentAttr", "title": "MEW Tags: Insert No-Indent" },
-      { "command": "mewReader.insert.hrs", "title": "MEW Tags: Insert Short HR" },
-      { "command": "mewReader.insert.HR", "title": "MEW Tags: Insert HR" },
-      { "command": "mewReader.insert.BR", "title": "MEW Tags: Insert BR" }
+      {
+        "command": "mewReader.showBar",
+        "title": "MEW Reader: Show Tag Bar",
+        "icon": "media/tag.svg"
+      },
+      {
+        "command": "mewReader.openFloatingBar",
+        "title": "MEW Reader: 在新窗口打开标签插入栏",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "mewReader.openPdf",
+        "title": "MEW Reader: Open Synchronized PDF",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "mewReader.openPreviousPage",
+        "title": "MEW Reader: Previous HTML/PDF Page",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "mewReader.openNextPage",
+        "title": "MEW Reader: Next HTML/PDF Page",
+        "icon": "$(arrow-right)"
+      },
+      {
+        "command": "mewReader.insert.b",
+        "title": "MEW Tags: Insert Bold"
+      },
+      {
+        "command": "mewReader.insert.i",
+        "title": "MEW Tags: Insert Italic"
+      },
+      {
+        "command": "mewReader.insert.em",
+        "title": "MEW Tags: Insert Emphasis"
+      },
+      {
+        "command": "mewReader.insert.q",
+        "title": "MEW Tags: Insert Blockquote"
+      },
+      {
+        "command": "mewReader.insert.a",
+        "title": "MEW Tags: Insert Anchor"
+      },
+      {
+        "command": "mewReader.insert.x",
+        "title": "MEW Tags: Insert ID Anchor"
+      },
+      {
+        "command": "mewReader.insert.l",
+        "title": "MEW Tags: Insert HREF"
+      },
+      {
+        "command": "mewReader.insert.f",
+        "title": "MEW Tags: Insert Footnote"
+      },
+      {
+        "command": "mewReader.insert.r",
+        "title": "MEW Tags: Insert Right Paragraph"
+      },
+      {
+        "command": "mewReader.insert.c",
+        "title": "MEW Tags: Insert Center Paragraph"
+      },
+      {
+        "command": "mewReader.insert.h1",
+        "title": "MEW Tags: Insert H1"
+      },
+      {
+        "command": "mewReader.insert.h2",
+        "title": "MEW Tags: Insert H2"
+      },
+      {
+        "command": "mewReader.insert.h3",
+        "title": "MEW Tags: Insert H3"
+      },
+      {
+        "command": "mewReader.insert.h4",
+        "title": "MEW Tags: Insert H4"
+      },
+      {
+        "command": "mewReader.insert.h5",
+        "title": "MEW Tags: Insert H5"
+      },
+      {
+        "command": "mewReader.insert.h6",
+        "title": "MEW Tags: Insert H6"
+      },
+      {
+        "command": "mewReader.insert.p",
+        "title": "MEW Tags: Insert Paragraph"
+      },
+      {
+        "command": "mewReader.insert.div",
+        "title": "MEW Tags: Insert DIV"
+      },
+      {
+        "command": "mewReader.insert.span",
+        "title": "MEW Tags: Insert SPAN"
+      },
+      {
+        "command": "mewReader.insert.aside",
+        "title": "MEW Tags: Insert ASIDE"
+      },
+      {
+        "command": "mewReader.insert.sup",
+        "title": "MEW Tags: Insert SUP"
+      },
+      {
+        "command": "mewReader.insert.sub",
+        "title": "MEW Tags: Insert SUB"
+      },
+      {
+        "command": "mewReader.insert.idAttr",
+        "title": "MEW Tags: Insert ID Attribute"
+      },
+      {
+        "command": "mewReader.insert.classAttr",
+        "title": "MEW Tags: Insert CLASS Attribute"
+      },
+      {
+        "command": "mewReader.insert.styleAttr",
+        "title": "MEW Tags: Insert STYLE Attribute"
+      },
+      {
+        "command": "mewReader.insert.noIndentAttr",
+        "title": "MEW Tags: Insert No-Indent"
+      },
+      {
+        "command": "mewReader.insert.hrs",
+        "title": "MEW Tags: Insert Short HR"
+      },
+      {
+        "command": "mewReader.insert.HR",
+        "title": "MEW Tags: Insert HR"
+      },
+      {
+        "command": "mewReader.insert.BR",
+        "title": "MEW Tags: Insert BR"
+      },
+      {
+        "command": "mewReader.insert.u",
+        "title": "MEW Reader: Insert Underline"
+      },
+      {
+        "command": "mewReader.insert.ltgt",
+        "title": "MEW Reader: Insert Angle Brackets"
+      },
+      {
+        "command": "mewReader.insert.SUPdSUB",
+        "title": "MEW Reader: Insert Sup/Sub Division"
+      }
     ],
     "configuration": {
       "title": "MEW Reader",
       "properties": {
-        "mewReader.configFile": { "type": "string", "default": "", "scope": "resource", "description": "JSON 配置路径；相对路径以工作区文件夹为基准。留空时从当前 HTML 目录向上查找 .mew-reader.json 或 mew-reader.json。" },
-        "mewReader.autoOpenPdf": { "type": "boolean", "default": true, "scope": "window", "description": "打开配置内 HTML 时自动创建同步 PDF 标签页。" },
-        "mewReader.pdfOpenLocation": { "type": "string", "enum": ["beside", "active", "newWindow"], "enumDescriptions": ["在当前 HTML 的右侧编辑器组打开", "在当前编辑器组打开", "创建后调用 VS Code 的“将编辑器移到新窗口”命令"], "default": "beside", "scope": "window", "description": "首次创建 PDF 标签页的位置。创建后手动移动页签也不会中断同步或把它移回。" }
+        "mewReader.configFile": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "JSON 配置路径；相对路径以工作区文件夹为基准。留空时从当前 HTML 目录向上查找 .mew-reader.json 或 mew-reader.json。"
+        },
+        "mewReader.autoOpenPdf": {
+          "type": "boolean",
+          "default": true,
+          "scope": "window",
+          "description": "打开配置内 HTML 时自动创建同步 PDF 标签页。"
+        },
+        "mewReader.pdfOpenLocation": {
+          "type": "string",
+          "enum": [
+            "beside",
+            "active",
+            "newWindow"
+          ],
+          "enumDescriptions": [
+            "在当前 HTML 的右侧编辑器组打开",
+            "在当前编辑器组打开",
+            "创建后调用 VS Code 的“将编辑器移到新窗口”命令"
+          ],
+          "default": "beside",
+          "scope": "window",
+          "description": "首次创建 PDF 标签页的位置。创建后手动移动页签也不会中断同步或把它移回。"
+        }
       }
     },
-    "customEditors": [{
-      "viewType": "mewReader.pdf",
-      "displayName": "MEW Synchronized PDF",
-      "selector": [{ "filenamePattern": "*.pdf" }],
-      "priority": "option"
-    }],
-    "viewsContainers": { "panel": [{ "id": "mewReader", "title": "HTML Tags", "icon": "media/tag.svg" }] },
-    "views": { "mewReader": [{ "type": "webview", "id": "mewReader.bar", "name": "Tag Bar", "visibility": "visible", "when": "!mewReader.floating" }] },
-    "keybindings": [
-      { "command": "mewReader.openPreviousPage", "key": "alt+pageup", "when": "editorTextFocus" },
-      { "command": "mewReader.openNextPage", "key": "alt+pagedown", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.b", "key": "alt+b", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.i", "key": "alt+i", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.q", "key": "alt+q", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.a", "key": "alt+a", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.x", "key": "alt+x", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.l", "key": "alt+l", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.f", "key": "alt+f", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.r", "key": "alt+r", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.c", "key": "alt+c", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h1", "key": "alt+1", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h2", "key": "alt+2", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h3", "key": "alt+3", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h4", "key": "alt+4", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h5", "key": "alt+5", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.h6", "key": "alt+6", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.p", "key": "alt+p", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.BR", "key": "alt+enter", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.div", "key": "alt+d", "when": "editorTextFocus" },
-      { "command": "mewReader.insert.span", "key": "alt+s", "when": "editorTextFocus" }
+    "customEditors": [
+      {
+        "viewType": "mewReader.pdf",
+        "displayName": "MEW Synchronized PDF",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
+          }
+        ],
+        "priority": "option"
+      }
     ],
-    "menus": { "view/title": [
-      { "command": "mewReader.openFloatingBar", "when": "view == mewReader.bar", "group": "navigation" }
-    ], "editor/title": [
-      { "command": "mewReader.openPreviousPage", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@1" },
-      { "command": "mewReader.openNextPage", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@2" },
-      { "command": "mewReader.openPdf", "when": "resourceExtname == .html || resourceExtname == .htm", "group": "navigation@3" },
-      { "command": "mewReader.showBar", "group": "navigation@4" }
-    ] }
+    "viewsContainers": {
+      "panel": [
+        {
+          "id": "mewReader",
+          "title": "HTML Tags",
+          "icon": "media/tag.svg"
+        }
+      ]
+    },
+    "views": {
+      "mewReader": [
+        {
+          "type": "webview",
+          "id": "mewReader.bar",
+          "name": "Tag Bar",
+          "visibility": "visible",
+          "when": "!mewReader.floating"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "mewReader.openPreviousPage",
+        "key": "alt+pageup",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.openNextPage",
+        "key": "alt+pagedown",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.b",
+        "key": "alt+b",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.i",
+        "key": "alt+i",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.q",
+        "key": "alt+q",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.a",
+        "key": "alt+a",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.x",
+        "key": "alt+x",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.l",
+        "key": "alt+l",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.f",
+        "key": "alt+f",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.r",
+        "key": "alt+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.c",
+        "key": "alt+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h1",
+        "key": "alt+1",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h2",
+        "key": "alt+2",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h3",
+        "key": "alt+3",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h4",
+        "key": "alt+4",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h5",
+        "key": "alt+5",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.h6",
+        "key": "alt+6",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.p",
+        "key": "alt+p",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.BR",
+        "key": "alt+enter",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.div",
+        "key": "alt+d",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.span",
+        "key": "alt+s",
+        "when": "editorTextFocus"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "mewReader.openFloatingBar",
+          "when": "view == mewReader.bar",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "mewReader.openPreviousPage",
+          "when": "resourceExtname == .html || resourceExtname == .htm",
+          "group": "navigation@1"
+        },
+        {
+          "command": "mewReader.openNextPage",
+          "when": "resourceExtname == .html || resourceExtname == .htm",
+          "group": "navigation@2"
+        },
+        {
+          "command": "mewReader.openPdf",
+          "when": "resourceExtname == .html || resourceExtname == .htm",
+          "group": "navigation@3"
+        },
+        {
+          "command": "mewReader.showBar",
+          "group": "navigation@4"
+        }
+      ]
+    }
   },
-  "scripts": { "check": "node --check extension.cjs && node --check reader-core.cjs && node --check reader-pdf.js && node --check pdf-source.mjs && node --check pdf-worker.mjs && node --check generate-mew-brief-config.mjs && node --test test/*.test.cjs", "package": "vsce package" },
-  "dependencies": { "pdfjs-dist": "6.2.108" },
-  "devDependencies": { "@vscode/vsce": "^3.6.2" }
+  "scripts": {
+    "check": "node --check extension.cjs && node --check reader-core.cjs && node --check reader-pdf.js && node --check pdf-source.mjs && node --check pdf-worker.mjs && node --check generate-mew-brief-config.mjs && node --test test/*.test.cjs",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.2.108"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.2"
+  }
 }

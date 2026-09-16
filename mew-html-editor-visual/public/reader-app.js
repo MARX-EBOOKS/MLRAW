@@ -5,7 +5,7 @@
   const tagPanel = window.MewTagPanel;
   if (!tagPanel) throw new Error("MewTagPanel 未载入");
   const { DocumentModel, createChannel } = core;
-  const { tags, attrs, tagMap, blockTagNames, buildTagEdit } = tagPanel;
+  const { tags, attrs, tagMap, blockTagNames } = tagPanel;
   const blockSelector = [...blockTagNames].join(",");
 
   const ui = window.ReaderUI;
@@ -520,12 +520,10 @@
   function insertSourceTag(tag) {
     const { start, end } = ui.getSourceSelection();
     const source = ui.getSource();
-    const operation = buildTagEdit(source, start, end, tag);
+    const operation = ui.applySourceTag(tag);
     const removed = operation.text.length < operation.end - operation.start;
     const wrapped = tag.open + source.slice(start, end) + tag.close;
     const replaced = !removed && operation.text !== wrapped;
-    applySourceEdit(operation.text, operation.start, operation.end,
-      operation.start + operation.selectStart, operation.start + operation.selectEnd);
     return removed ? "已移除" : replaced ? "已替换" : "已插入";
   }
 

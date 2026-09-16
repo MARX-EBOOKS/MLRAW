@@ -11,6 +11,7 @@ const tagPanel = window.MewTagPanel;
 if (!tagPanel) throw new Error('MewTagPanel 未载入');
 const { DocumentModel, MonacoController, createChannel, languageForPath } = core;
 const { tags, attrs, tagMap } = tagPanel;
+let tagEditor;
 let workbenchChordTimer = 0, workbenchChordPending = false;
 
 function handleWorkbenchChord(event) {
@@ -346,11 +347,11 @@ function applyExternalUpdate(d) {
 }
 function editTag(tag) {
   if (!doc()) return note('Open a file first');
-  if (doc().editable) tagPanel.applyTag(source, tag);
+  if (doc().editable) tagEditor.applyTag(tag);
 }
 function insertAttr(attr) {
   if (!doc()) return note('Open a file first');
-  if (doc().editable) tagPanel.insert(source, attr);
+  if (doc().editable) tagEditor.applyTag(attr);
 }
 function undo() { source.undo(); }
 function redo() { source.redo(); }
@@ -401,6 +402,7 @@ function initialize(api) {
     // 0.55.1 occurrence requests can reject on rapid model switches.
     occurrencesHighlight: 'off', scrollBeyondLastLine: false, padding: { top: 14, bottom: 14 }
   });
+  tagEditor = new tagPanel.TagEditor(source);
   editor = source.editor;
   editor.onDidChangeCursorPosition(event => {
     ui.setPosition(event.position.lineNumber, event.position.column);

@@ -1,5 +1,6 @@
 .float-panel{--fp-scale:1;--fp-font:calc(12px * var(--fp-scale));--fp-gap:calc(4px * var(--fp-scale));--fp-pad-x:calc(7px * var(--fp-scale));--fp-header-height:29px;--fp-control-height:calc(28px * var(--fp-scale));--fp-content-min-height:28px;position:relative;display:flex;flex:none;flex-direction:column;min-width:0;min-height:calc(var(--fp-header-height) + var(--fp-content-min-height));background:var(--panel);z-index:5}
 .float-panel[hidden]{display:none}
+.fp-hide{flex:none;width:24px;height:22px;min-height:22px;padding:0;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink);cursor:pointer}.fp-hide:hover{color:var(--fp-accent,var(--red,#8aa4cf))}
 .float-panel>.tag-bar{display:flex;flex:1 1 auto;min-width:0;min-height:0;gap:var(--fp-gap);padding:0 var(--fp-pad-x);flex-wrap:wrap;align-content:safe center;align-items:center;border-bottom:0;overflow-x:auto;overflow-y:hidden}
 .float-panel.auto-height>.tag-bar{flex:0 0 auto;overflow-x:hidden}
 .float-panel>.tag-bar button{display:inline-flex;flex:0 0 auto;align-items:center;justify-content:center;height:var(--fp-control-height);min-height:16px;font-size:var(--fp-font);padding:0 var(--fp-pad-x)}

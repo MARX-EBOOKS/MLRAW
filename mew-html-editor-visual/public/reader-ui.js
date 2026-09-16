@@ -14,13 +14,14 @@
   const pdfFrame = byId("pdfFrame");
   const listeners = {};
   let initialized = false;
-  let monacoApi = null, source = null;
+  let monacoApi = null, source = null, tagEditor = null;
   let editorScale = 1;
   let statusTimer = null;
   let pendingPdfOptions = null;
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
   let pdfUrl = "", pdfPageLabels = null, scrollMode = null, pdfWriteTimer = null, pdfRevision = 0;
   let pdfShortcutActive = false;
+  let pdfContextPageNumber = null;
   const PDF_SETTINGS_KEY = "readerPdfSettings.v1";
   const PDF_DEFAULTS = { brightness: 100, paper: "#ffffff", ink: "#000000", invert: false, horizontal: false, scale: "page-width" };
   let pdfSettings = { ...PDF_DEFAULTS };
@@ -75,6 +76,7 @@
       colorDecorators: true, defaultColorDecorators: "never"
     });
     source.setModel(source.createModel({ text: "", language: "html", uri: monacoApi.Uri.parse("mew-reader:///page.html"), onChange: () => emit("sourceInput") }));
+    tagEditor = new window.MewTagPanel.TagEditor(source);
     source.editor.onDidChangeCursorSelection(() => emit("historyChanged"));
     source.editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyF, () => toggleSourceFind(false, false));
     source.editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyH, () => toggleSourceFind(true, false));
@@ -329,13 +331,99 @@
     return matches?.reduce((best, page) => Math.abs(page - current) < Math.abs(best - current) ? page : best, matches[0]) || null;
   }
   function showPendingPdfPage() { const page = pdfPageNumberForLabel(pendingPdfOptions?.pageLabel); if (page) pdfViewer.currentPageNumber = page; }
+
+  function imageObject(page, id) {
+    if (typeof id !== "string") return null;
+    const objects = id.startsWith("g_") ? page.commonObjs : page.objs;
+    return objects.has(id) ? objects.get(id) : null;
+  }
+
+  function resolvedImage(page, image) {
+    if (typeof image === "string") return imageObject(page, image);
+    return typeof image?.data === "string" ? imageObject(page, image.data) : image;
+  }
+
+  async function originalPdfPageImage(pageNumber) {
+    const page = await pdfViewer?.pdfDocument?.getPage(pageNumber);
+    if (!page) throw new Error("PDF 页面尚未载入");
+    const operators = await page.getOperatorList();
+    const { OPS } = globalThis.pdfjsLib;
+    const candidates = [];
+    for (let index = 0; index < operators.fnArray.length; index += 1) {
+      const operation = operators.fnArray[index];
+      const args = operators.argsArray[index];
+      let image = null;
+      if (operation === OPS.paintInlineImageXObject || operation === OPS.paintImageMaskXObject) image = args[0];
+      else if (operation === OPS.paintImageXObject || operation === OPS.paintImageXObjectRepeat) image = args[0];
+      image = resolvedImage(page, image);
+      if (!image?.width || !image?.height || (!image.bitmap && !image.data)) continue;
+      candidates.push(image);
+    }
+    if (!candidates.length) throw new Error("当前 PDF 页没有可复制的扫描底图");
+    return candidates.reduce((largest, image) => image.width * image.height > largest.width * largest.height ? image : largest);
+  }
+
+  function pdfImagePng(image) {
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (image.bitmap) context.drawImage(image.bitmap, 0, 0);
+    else {
+      const pixels = context.createImageData(image.width, image.height);
+      const target = pixels.data;
+      const { ImageKind } = globalThis.pdfjsLib;
+      if (image.kind === ImageKind.RGBA_32BPP) target.set(image.data);
+      else if (image.kind === ImageKind.RGB_24BPP) {
+        for (let source = 0, dest = 0; source < image.data.length; source += 3, dest += 4) {
+          target[dest] = image.data[source]; target[dest + 1] = image.data[source + 1];
+          target[dest + 2] = image.data[source + 2]; target[dest + 3] = 255;
+        }
+      } else if (image.kind === ImageKind.GRAYSCALE_1BPP) {
+        const rowBytes = Math.ceil(image.width / 8);
+        for (let y = 0; y < image.height; y += 1) for (let x = 0; x < image.width; x += 1) {
+          const bit = image.data[y * rowBytes + (x >> 3)] >> (7 - (x & 7)) & 1;
+          const value = (bit ^ Boolean(image.inverseDecode)) ? 255 : 0;
+          const dest = (y * image.width + x) * 4;
+          target[dest] = target[dest + 1] = target[dest + 2] = value; target[dest + 3] = 255;
+        }
+      } else throw new Error("当前扫描底图的像素格式不受支持");
+      context.putImageData(pixels, 0, 0);
+    }
+    return new Promise((resolve, reject) => canvas.toBlob(
+      blob => blob ? resolve({ blob, width: image.width, height: image.height }) : reject(new Error("扫描底图 PNG 编码失败")),
+      "image/png"
+    ));
+  }
+
+  function copyOriginalPdfImage(event) {
+    const pageNumber = pdfContextPageNumber;
+    pdfContextPageNumber = null;
+    if (!pageNumber) return;
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      notify("当前浏览器不支持把 PDF 原底图写入剪贴板", true);
+      return;
+    }
+    event.preventDefault();
+    const result = originalPdfPageImage(pageNumber).then(pdfImagePng);
+    navigator.clipboard.write([new ClipboardItem({ "image/png": result.then(value => value.blob) })])
+      .then(async () => {
+        const { width, height } = await result;
+        notify(`已复制 PDF 原底图（${width} × ${height}）`);
+      })
+      .catch(error => notify(`复制 PDF 原底图失败：${error.message}`, true));
+  }
+
   async function ensurePdfRuntime() {
     if (pdfRuntimePromise) return pdfRuntimePromise;
     pdfRuntimePromise = (async () => {
       const pdfjs = await import("/vendor/pdfjs/build/pdf.mjs"); globalThis.pdfjsLib = pdfjs;
       const viewerModule = await import("/vendor/pdfjs/web/pdf_viewer.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/build/pdf.worker.mjs";
       const eventBus = new viewerModule.EventBus(); pdfLinkService = new viewerModule.PDFLinkService({ eventBus });
-      pdfViewer = new viewerModule.PDFViewer({ container: frameId("stage"), viewer: frameId("viewer"), eventBus, linkService: pdfLinkService, imageResourcesPath: "/vendor/pdfjs/web/images/" });
+      pdfViewer = new viewerModule.PDFViewer({
+        container: frameId("stage"), viewer: frameId("viewer"), eventBus, linkService: pdfLinkService,
+        imageResourcesPath: "/vendor/pdfjs/web/images/", imagesRightClickMinSize: 1
+      });
       pdfLinkService.setViewer(pdfViewer); scrollMode = viewerModule.ScrollMode;
       eventBus.on("pagesinit", () => { pdfViewer.setPageLabels(pdfPageLabels); pdfViewer.currentScaleValue = pdfSettings.scale; applyPdfSettings(); showPendingPdfPage(); setPdfStatus(); });
       eventBus.on("pagechanging", ({ pageNumber, pageLabel }) => { if (pageNumber != null) emit("pdfPageChange", { pageNumber, pageLabel }); });
@@ -369,9 +457,20 @@
   }
   function initPdfFrame() {
     pdfFrame.innerHTML = PDF_DIRECT_HTML;
-    document.addEventListener("pointerdown", (event) => { pdfShortcutActive = pdfFrame.contains(event.target); }, true);
+    pdfFrame.addEventListener("contextmenu", event => {
+      const page = event.target.closest?.(".pdfViewer .page");
+      pdfContextPageNumber = event.target instanceof HTMLCanvasElement && page ? Number(page.dataset.pageNumber) : null;
+    }, true);
+    document.addEventListener("copy", copyOriginalPdfImage, true);
+    document.addEventListener("pointerdown", (event) => {
+      pdfShortcutActive = pdfFrame.contains(event.target);
+      if (event.button !== 2) pdfContextPageNumber = null;
+    }, true);
     document.addEventListener("wheel", handlePdfScaleShortcut, { capture: true, passive: false });
-    document.addEventListener("keydown", handlePdfScaleShortcut, true);
+    document.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "c") pdfContextPageNumber = null;
+      handlePdfScaleShortcut(event);
+    }, true);
     (async () => {
       let saved = {};
       try { saved = JSON.parse(localStorage.getItem(PDF_SETTINGS_KEY) || "{}"); } catch { localStorage.removeItem(PDF_SETTINGS_KEY); }
@@ -511,6 +610,7 @@
     init, notify, setDirty, setHistoryButtons, renderVolumes, renderToc, renderNavigation, renderTools,
     setMode, setWorkspaceMode, setToc, setPdf, applyVisualTheme, showVisual, initMonaco, setEditorScale,
     getSource: () => source?.getValue() || "",
+    applySourceTag: tag => tagEditor.applyTag(tag),
     setSource: (text, preserveUndo = false) => source?.setValue(text, preserveUndo, "reader.visual"),
     getSourceSelection: () => source?.selection() || { start: 0, end: 0 },
     setSourceSelection: (start, end = start) => source?.setSelection(start, end),

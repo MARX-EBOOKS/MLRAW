@@ -37,134 +37,163 @@
   const tagMap = new Map(tags.filter(tag => tag.shortcut).map(tag => [tag.shortcut.toLowerCase(), tag]));
   const blockTagNames = new Set(["p", "div", "h1", "h2", "h3", "h4", "h5", "h6"]);
   const blockTagIds = new Set(["p", "r", "c", "h1", "h2", "h3", "h4", "h5", "h6", "div"]);
+  const inlineTagIds = new Set(["i", "b", "u", "em", "span"])
   const voidTagNames = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"]);
   const rawTagNames = new Set(["script", "style", "textarea", "title"]);
   const tagPattern = /<!--[\s\S]*?-->|<\/?[A-Za-z][\w:-]*\b(?:[^>"']|"[^"]*"|'[^']*')*>/g;
 
-  function changeWrapper(text, element, start, end, tag) {
-    const open = tag?.open || "", close = tag?.close || "";
-    const inner = text.slice(element.openEnd, element.closeStart);
-    const whole = start === element.start && end === element.end;
-    const inOpeningTag = start === end && element.start < start && start < element.openEnd;
-    const from = whole || inOpeningTag ? 0 : start - element.openEnd;
-    const to = whole ? inner.length : inOpeningTag ? 0 : end - element.openEnd;
-    return { start: element.start, end: element.end, text: open + inner + close,
-      selectStart: open.length + from, selectEnd: open.length + to };
-  }
-
-  function wrapEdit(start, end, selected, tag, keepSelection) {
-    const text = tag.open + selected + tag.close;
-    const emptyAttribute = tag.open.indexOf('=""');
-    const cursor = emptyAttribute >= 0 ? emptyAttribute + 2 : selected ? text.length : tag.open.length;
-    return { start, end, text,
-      selectStart: keepSelection ? tag.open.length : cursor,
-      selectEnd: keepSelection ? tag.open.length + selected.length : cursor };
-  }
-
-  function tagPairs(text) {
-    const stack = [], pairs = [];
-    let rawName;
-    tagPattern.lastIndex = 0;
-    for (let match; (match = tagPattern.exec(text));) {
-      const token = match[0];
-      if (token.startsWith("<!--")) continue;
-      const name = token.match(/^<\/?([A-Za-z][\w:-]*)/i)[1].toLowerCase();
-      const closing = /^<\//.test(token);
-      if (rawName && !(closing && name === rawName)) continue;
-      if (closing) {
-        const open = stack.at(-1);
-        const crossed = stack.findLastIndex(item => item.name === name);
-        if (open && (open.name === name || crossed < 0)) {
-          stack.pop();
-          pairs.push({ name: open.name, closeName: name, start: open.start, openEnd: open.end,
-            closeStart: match.index, end: tagPattern.lastIndex, open: open.token });
-          if (name === rawName) rawName = undefined;
-        } else if (crossed >= 0) stack.length = crossed;
-      } else if (voidTagNames.has(name) || /\/\s*>$/.test(token)) {
-        pairs.push({ name, start: match.index, openEnd: tagPattern.lastIndex,
-          closeStart: tagPattern.lastIndex, end: tagPattern.lastIndex, open: token });
-      } else {
-        stack.push({ name, start: match.index, end: tagPattern.lastIndex, token });
-        if (rawTagNames.has(name)) rawName = name;
-      }
+  class TagEditor {
+    constructor(editor) {
+      this.editor = editor;
+      this.detect(editor.getValue());
     }
-    return pairs;
-  }
 
-  function innermost(elements, start, end) {
-    return elements
-      .filter(element => (start === end && element.start < start && start < element.openEnd) ||
-        (element.openEnd <= start && end <= element.closeStart))
-      .reduce((inner, element) => !inner || element.end - element.start < inner.end - inner.start ? element : inner, undefined);
-  }
-
-  function isCompleteSelection(text, elements, start, end) {
-    const byStart = new Map(elements.map(element => [element.start, element]));
-    let cursor = start, found = false;
-    while (cursor < end) {
-      if (/\s/.test(text[cursor])) { cursor += 1; continue; }
-      const outer = byStart.get(cursor);
-      if (!outer || outer.end > end) return false;
-      found = true;
-      cursor = outer.end;
+    detect(text) {
+      if (this.text === text) return;
+      const stack = [], pairs = [], byStart = new Map();
+      let rawName;
+      tagPattern.lastIndex = 0;
+      for (let match; (match = tagPattern.exec(text));) {
+        const token = match[0];
+        if (token.startsWith("<!--")) continue;
+        const name = token.match(/^<\/?([A-Za-z][\w:-]*)/i)[1].toLowerCase();
+        const closing = /^<\//.test(token);
+        if (rawName && !(closing && name === rawName)) continue;
+        if (closing) {
+          const open = stack.at(-1);
+          const crossed = stack.findLastIndex(item => item.name === name);
+          if (open && (open.name === name || crossed < 0)) {
+            stack.pop();
+            pairs.push({ name: open.name, closeName: name, start: open.start, openEnd: open.end,
+              closeStart: match.index, end: tagPattern.lastIndex, open: open.token });
+            if (name === rawName) rawName = undefined;
+          } else if (crossed >= 0) stack.length = crossed;
+        } else if (voidTagNames.has(name) || /\/\s*>$/.test(token)) {
+          pairs.push({ name, start: match.index, openEnd: tagPattern.lastIndex,
+            closeStart: tagPattern.lastIndex, end: tagPattern.lastIndex, open: token });
+        } else {
+          stack.push({ name, start: match.index, end: tagPattern.lastIndex, token });
+          if (rawTagNames.has(name)) rawName = name;
+        }
+      }
+      for (const pair of pairs) {
+        const align = pair.open.match(/\balign\s*=\s*["']?(center|right)\b/i)?.[1]?.toLowerCase();
+        pair.id = pair.name === "p" ? align === "center" ? "c" : align === "right" ? "r" : "p" : pair.name;
+        byStart.set(pair.start, pair);
+      }
+      this.text = text;
+      this.detected = { pairs, byStart };
     }
-    return found;
-  }
 
-  function blockId(element) {
-    if (element.name !== "p") return element.name;
-    const align = element.open.match(/\balign\s*=\s*["']?(center|right)/i)?.[1]?.toLowerCase();
-    return align === "center" ? "c" : align === "right" ? "r" : "p";
-  }
-
-  function buildTagEdit(text, start, end, tag) {
-    const elements = tagPairs(text);
-    const selected = text.slice(start, end);
-    const name = /^<([A-Za-z][\w:-]*)\b/.exec(tag.open)?.[1].toLowerCase();
-    const simple = name && tag.close.toLowerCase() === `</${name}>`;
-    const complete = start < end && isCompleteSelection(text, elements, start, end);
-    const exact = complete && elements.find(element => element.start === start && element.end === end);
-    if (complete) {
-      if (exact && exact.closeName && exact.closeName !== exact.name) {
-        return changeWrapper(text, exact, start, end, name === exact.name ? undefined : tag);
+    buildTagEdit(start, end, tag) {
+      const text = this.text, { pairs, byStart } = this.detected;
+      // Keep the selected line ending outside the edit, including both bytes of CRLF.
+      const newline = text.slice(start, end).match(/\r?\n$/)?.[0] || "";
+      end -= newline.length;
+      const lineStart = text.lastIndexOf("\n", Math.max(0, start - 1)) + 1;
+      const nextLine = text.indexOf("\n", end);
+      const lineEnd = nextLine < 0 ? text.length : nextLine;
+      const wholeLine = start < end && !/\S/.test(text.slice(lineStart, start)) &&
+        !/\S/.test(text.slice(end, lineEnd)) && !/[\r\n]/.test(text.slice(start, end));
+      // A line selection may include indentation, trailing spaces and the next line's column 1.
+      if (wholeLine) {
+        const selected = text.slice(start, end), content = selected.trim();
+        if (content) { start += selected.indexOf(content); end = start + content.length; }
       }
-      if (exact && blockTagNames.has(exact.name) && blockTagIds.has(tag.id)) {
-        if (blockId(exact) === tag.id) return changeWrapper(text, exact, start, end);
-        if (tag.id !== "div") return changeWrapper(text, exact, start, end, tag);
+      const selected = text.slice(start, end);
+      const name = /^<([A-Za-z][\w:-]*)\b/.exec(tag.open)?.[1].toLowerCase();
+      const simple = name && tag.close.toLowerCase() === `</${name}>`;
+      let cursor = start, found = false, block, same;
+      while (cursor < end) {
+        if (/\s/.test(text[cursor])) { cursor++; continue; }
+        const pair = byStart.get(cursor);
+        if (!pair || pair.end > end) break;
+        found = true; cursor = pair.end;
       }
-      if (exact && exact.name === name && simple) return changeWrapper(text, exact, start, end);
-      if (tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
+      const complete = found && cursor === end;
+      const exact = complete && byStart.get(start)?.end === end && byStart.get(start);
+      if (!complete) for (const pair of pairs) {
+        if (!((start === end && pair.start < start && start < pair.openEnd) ||
+          (pair.openEnd <= start && end <= pair.closeStart))) continue;
+        if (blockTagIds.has(tag.id) && blockTagNames.has(pair.name) &&
+          (!block || pair.end - pair.start < block.end - block.start)) block = pair;
+        if (simple && pair.name === name && (!same || pair.end - pair.start < same.end - same.start)) same = pair;
+      }
+      const mismatched = exact && exact.closeName && exact.closeName !== exact.name;
+      const isBlock = exact && blockTagNames.has(exact.name);
+      const replaceBlock = isBlock && blockTagIds.has(tag.id) && (exact.id === tag.id || tag.id !== "div");
+      const inlineInsert = isBlock && inlineTagIds.has(tag.id);
+      const wrapper = exact ? (mismatched || replaceBlock || (simple && exact.name === name) || inlineInsert) && exact : block || same;
+      if (wrapper) {
+        const remove = mismatched ? name === wrapper.name : (replaceBlock || block) ? wrapper.id === tag.id : true;
+        let open = remove ? "" : tag.open, close = remove ? "" : tag.close;
+        const inner = text.slice(wrapper.openEnd, wrapper.closeStart);
+        const inOpening = start === end && start < wrapper.openEnd;
+        if (inlineInsert) {
+          open = text.slice(start, wrapper.openEnd) + tag.open;
+          close = tag.open + text.slice(wrapper.closeStart, byStart.get(start).end);
+        }
+        return { start: wrapper.start, end: wrapper.end, text: open + inner + close,
+          selectStart: open.length + (exact || inOpening ? 0 : start - wrapper.openEnd),
+          selectEnd: open.length + (exact ? inner.length : inOpening ? 0 : end - wrapper.openEnd) };
+      }
+      if (complete && tag.close && selected.startsWith(tag.open) && selected.endsWith(tag.close)) {
         const inner = selected.slice(tag.open.length, -tag.close.length);
         return { start, end, text: inner, selectStart: 0, selectEnd: inner.length };
       }
-      return wrapEdit(start, end, selected, tag, true);
+      const before = start - tag.open.length, after = end + tag.close.length;
+      if (!complete && tag.close && before >= 0 && text.slice(before, start) === tag.open && text.slice(end, after) === tag.close) {
+        return { start: before, end: after, text: selected, selectStart: 0, selectEnd: selected.length };
+      }
+      const replacement = tag.open + selected + tag.close, emptyAttribute = tag.open.indexOf('=""');
+      cursor = emptyAttribute >= 0 ? emptyAttribute + 2 : selected ? replacement.length : tag.open.length;
+      return { start, end, text: replacement, selectStart: complete ? tag.open.length : cursor,
+        selectEnd: complete ? tag.open.length + selected.length : cursor };
     }
-    const block = blockTagIds.has(tag.id) && innermost(elements.filter(element => blockTagNames.has(element.name)), start, end);
-    if (block) return changeWrapper(text, block, start, end, blockId(block) === tag.id ? undefined : tag);
-    const same = simple && innermost(elements.filter(element => element.name === name), start, end);
-    if (same) return changeWrapper(text, same, start, end);
-    const before = start - tag.open.length, after = end + tag.close.length;
-    if (tag.close && before >= 0 && text.slice(before, start) === tag.open && text.slice(end, after) === tag.close) {
-      return { start: before, end: after, text: selected, selectStart: 0, selectEnd: selected.length };
+
+    applyTag(item) {
+      const editor = this.editor;
+      const tag = item.open !== undefined ? item : null;
+      const text = editor.getValue(), selections = editor.selections?.() || [editor.selection()];
+      if (tag) this.detect(text);
+      const source = tag ? "mew.tag" : "mew.attr";
+      const operations = selections.map(({ start, end }) => tag ? this.buildTagEdit(start, end, tag) : {
+        start, end, text: item.text, selectStart: item.cursorOffset ?? item.text.length,
+        selectEnd: item.cursorOffset ?? item.text.length
+      });
+      if (operations.length === 1) {
+        const op = operations[0];
+        editor.replaceRange(op.text, op.start, op.end, op.start + op.selectStart, op.start + op.selectEnd, source);
+        if (tag) editor.editor?.revealRangeInCenterIfOutsideViewport(editor.editor.getSelection());
+      } else {
+        const edits = new Map(), targets = [];
+        for (const operation of operations) {
+          const pair = tag && this.detected.byStart.get(operation.start);
+          const inner = pair && text.slice(pair.openEnd, pair.closeStart);
+          const opening = tag?.open || "", closing = tag?.close || "";
+          // Split wrapper changes so shared/nested multi-cursor edits preserve the inner text.
+          if (pair?.end === operation.end && (operation.text === inner || operation.text === opening + inner + closing)) {
+            const remove = operation.text === inner;
+            edits.set(`${pair.start}:${pair.openEnd}`, { start: pair.start, end: pair.openEnd, text: remove ? "" : opening });
+            edits.set(`${pair.closeStart}:${pair.end}`, { start: pair.closeStart, end: pair.end, text: remove ? "" : closing });
+            targets.push({ start: pair.openEnd + operation.selectStart - (remove ? 0 : opening.length),
+              end: pair.openEnd + operation.selectEnd - (remove ? 0 : opening.length) });
+          } else {
+            const key = `${operation.start}:${operation.end}`;
+            if (!edits.has(key)) edits.set(key, operation);
+            targets.push({ operation: edits.get(key) });
+          }
+        }
+        const changes = [...edits.values()].sort((a, b) => a.start - b.start || a.end - b.end);
+        const offset = (position, own) => position + changes.reduce((shift, edit) =>
+          shift + (edit !== own && edit.end <= position ? edit.text.length - (edit.end - edit.start) : 0), 0);
+        editor.replaceRanges(changes, targets.map(({ operation: op, start, end }) => op ? {
+          start: offset(op.start, op) + op.selectStart, end: offset(op.start, op) + op.selectEnd
+        } : { start: offset(start), end: offset(end) }), source);
+      }
+      editor.focus();
+      return operations[0];
     }
-    return wrapEdit(start, end, selected, tag, false);
-  }
-
-  function applyTag(editor, tag) {
-    const { start, end } = editor.selection();
-    const operation = buildTagEdit(editor.getValue(), start, end, tag);
-    editor.replaceRange(operation.text, operation.start, operation.end,
-      operation.start + operation.selectStart, operation.start + operation.selectEnd, "mew.tag");
-    editor.editor?.revealRangeInCenterIfOutsideViewport(editor.editor.getSelection());
-    editor.focus();
-    return operation;
-  }
-
-  function insert(editor, attr) {
-    const { start, end } = editor.selection();
-    const cursor = start + (attr.cursorOffset ?? attr.text.length);
-    editor.replaceRange(attr.text, start, end, cursor, cursor, "mew.attr");
-    editor.focus();
   }
 
   const MIN_SCALE = .8, MAX_SCALE = 1.6, SNAP = 56, CONTROL_HEIGHT = 28;
@@ -211,6 +240,9 @@
     actions.setAttribute("role", "group");
     actions.setAttribute("aria-label", "编辑按钮与编辑框尺寸及停靠位置");
     header.append(node("span", "fp-grip", "≡"), title, actions);
+    const hideButton = makeButton("×", "隐藏标签编辑框", "fp-hide");
+    header.append(hideButton);
+    hideButton.addEventListener("click", () => setVisible(false));
     content.classList.add("tag-bar");
     content.parentNode.insertBefore(panel, content);
     panel.append(header, content);
@@ -286,8 +318,8 @@
     };
     const apply = () => {
       panel.className = `float-panel ${state.dock === "floating" ? "floating" : `dock-${state.dock}`}`;
-      host.classList.toggle("bar-bottom", state.dock === "editor-bottom");
-      host.classList.toggle("bar-fixed", state.dock.startsWith("window-") || state.dock === "floating");
+      host.classList.toggle("bar-bottom", !panel.hidden && state.dock === "editor-bottom");
+      host.classList.toggle("bar-fixed", panel.hidden || state.dock.startsWith("window-") || state.dock === "floating");
       panel.style.left = panel.style.top = panel.style.right = panel.style.bottom = panel.style.width = "";
       let height = state.h;
       if (height != null) height = state.h = clamp(height, minHeight(), heightLimit());
@@ -395,9 +427,17 @@
     window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, h: null, scale: 1 }); updateScale("editor"); apply(); save(); });
     const setVisible = visible => {
       panel.hidden = !visible;
+      host.classList.toggle("bar-bottom", visible && state.dock === "editor-bottom");
+      host.classList.toggle("bar-fixed", !visible || state.dock.startsWith("window-") || state.dock === "floating");
+      const toggle = document.getElementById("tagPanelToggle");
+      if (toggle) {
+        toggle.textContent = `${visible ? "隐藏" : "打开"}标签编辑框`;
+        toggle.setAttribute("aria-expanded", String(visible));
+      }
       updateWindowDock();
     };
+    document.getElementById("tagPanelToggle")?.addEventListener("click", () => setVisible(panel.hidden));
     return { panel, setDock, setScale, setVisible, state };
   }
-  window.MewTagPanel = { mount, tags, attrs, tagMap, blockTagNames, buildTagEdit, applyTag, insert };
+  window.MewTagPanel = { mount, tags, attrs, tagMap, blockTagNames, TagEditor };
 })();

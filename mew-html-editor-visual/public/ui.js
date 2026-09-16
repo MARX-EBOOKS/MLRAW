@@ -294,12 +294,6 @@
       },
       editorSelector: '#monacoEditor'
     });
-    $('tagPanelToggle').addEventListener('click', () => {
-      const visible = tagPanel.panel.hidden;
-      tagPanel.setVisible(visible);
-      $('tagPanelToggle').textContent = `${visible ? '隐藏' : '打开'}标签编辑框`;
-      $('tagPanelToggle').setAttribute('aria-expanded', String(visible));
-    });
   }
 
   function editorScale() {

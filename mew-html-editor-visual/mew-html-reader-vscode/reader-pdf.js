@@ -2,9 +2,19 @@ import { openPdfSource, requestPdfData } from "./pdf-source.mjs";
 import { createPdfWorker } from "./pdf-worker.mjs";
 
 const vscode = acquireVsCodeApi();
+// A wheel can reach an inactive auxiliary window without focusing its webview.
+let pdfFocusRequested = false;
+function focusPdf(event) {
+  if (!event.isTrusted || (event.type === "wheel" && pdfFocusRequested)) return;
+  pdfFocusRequested = true;
+  vscode.postMessage({ type: "focusPdf" });
+}
+window.addEventListener("blur", () => { pdfFocusRequested = false; });
+window.addEventListener("pointerdown", focusPdf, { capture: true });
+window.addEventListener("wheel", focusPdf, { capture: true, passive: true });
 const config = JSON.parse(document.querySelector("#reader-config").dataset.config);
 const DEFAULTS = { scale: "page-width", horizontal: false, brightness: 100, paper: "#ffffff", ink: "#000000", invert: false };
-const stored = { ...(config.displaySettings || {}), ...(vscode.getState() || {}) };
+const stored = { ...(config.displaySettings || {}), ...(config.sessionState || {}), ...(vscode.getState() || {}) };
 const stage = document.querySelector("#stage");
 const status = document.querySelector("#status");
 const title = document.querySelector("#title");
@@ -42,12 +52,14 @@ function saveState(changes) {
 }
 
 function persistState() {
-  vscode.setState({ ...state, document: pending ? {
+  const saved = { ...state, document: pending ? {
     htmlUri: pending.htmlUri,
     pdfUri: pending.pdfUri,
     fileName: pending.fileName,
     pageLabel: pending.pageLabel
-  } : undefined });
+  } : undefined };
+  vscode.setState(saved);
+  vscode.postMessage({ type: "pdfState", state: saved });
 }
 
 function showStatus(text) { status.textContent = text; status.hidden = !text; }
@@ -120,6 +132,66 @@ function commitPage() {
   viewer.currentPageNumber = target;
   showPage(target);
   pageNumber.select();
+}
+
+// Decode the embedded image at its own pixel dimensions, never the page canvas.
+async function currentImageBlob(pdf, number) {
+  const page = await pdf.getPage(number);
+  const ops = await page.getOperatorList();
+  const { OPS, ImageKind } = config.pdfjs;
+  let largest;
+  for (let i = 0; i < ops.fnArray.length; i++) {
+    const op = ops.fnArray[i], args = ops.argsArray[i];
+    let image;
+    if (op === OPS.paintImageXObject || op === OPS.paintImageXObjectRepeat) {
+      const id = args[0];
+      image = await new Promise(resolve => (id.startsWith("g_") ? page.commonObjs : page.objs).get(id, resolve));
+    } else if (op === OPS.paintInlineImageXObject) image = args[0];
+    if (image && (!largest || image.width * image.height > largest.width * largest.height)) largest = image;
+  }
+  if (!largest) throw new Error("本页没有可复制的内嵌图片。");
+  const { width, height, bitmap, data, kind } = largest;
+  const canvas = document.createElement("canvas");
+  canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (bitmap) ctx.drawImage(bitmap, 0, 0);
+  else {
+    const pixels = ctx.createImageData(width, height);
+    const rgba = pixels.data;
+    if (kind === ImageKind.RGBA_32BPP) rgba.set(data);
+    else if (kind === ImageKind.RGB_24BPP || kind === ImageKind.GRAYSCALE_1BPP) {
+      for (let y = 0, p = 0; y < height; y++) for (let x = 0; x < width; x++, p++) {
+        const v = kind === ImageKind.GRAYSCALE_1BPP
+          ? ((data[y * Math.ceil(width / 8) + (x >> 3)] >> (7 - (x & 7))) & 1) * 255 : null;
+        rgba[p * 4] = v ?? data[p * 3];
+        rgba[p * 4 + 1] = v ?? data[p * 3 + 1];
+        rgba[p * 4 + 2] = v ?? data[p * 3 + 2];
+        rgba[p * 4 + 3] = 255;
+      }
+    } else throw new Error("暂不支持此内嵌图片格式。");
+    ctx.putImageData(pixels, 0, 0);
+  }
+  try {
+    return await new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("图片编码失败。")), "image/png"));
+  } finally { canvas.width = canvas.height = 0; }
+}
+
+async function copyCurrentImage() {
+  if (!viewer?.pdfDocument) return;
+  const button = document.querySelector("#copyImage");
+  button.disabled = true;
+  button.textContent = "正在复制…";
+  try {
+    // Pass the promise during the click so clipboard user activation is retained.
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": currentImageBlob(viewer.pdfDocument, viewer.currentPageNumber) })]);
+    button.textContent = "已复制";
+  } catch (error) {
+    button.textContent = "复制失败";
+    vscode.postMessage({ type: "copyImageError", error: error.message });
+  } finally {
+    button.disabled = false;
+    setTimeout(() => { button.textContent = "复制本页图片"; }, 2000);
+  }
 }
 
 async function loadPdf(message) {
@@ -197,7 +269,13 @@ async function init() {
   }, { once: true });
   const eventBus = new pdfview.EventBus();
   linkService = new pdfview.PDFLinkService({ eventBus });
-  viewer = new pdfview.PDFViewer({ container: stage, viewer: document.querySelector("#viewer"), eventBus, linkService, imageResourcesPath: config.images });
+  viewer = new pdfview.PDFViewer({
+    container: stage,
+    viewer: document.querySelector("#viewer"),
+    eventBus,
+    linkService,
+    imageResourcesPath: config.images
+  });
   linkService.setViewer(viewer); config.pdfjs = pdfjs; scrollMode = pdfview.ScrollMode;
   eventBus.on("pagesinit", async () => {
     const revision = documentRevision;
@@ -212,10 +290,18 @@ async function init() {
   eventBus.on("pagerendered", ({ pageNumber: number, error }) => {
     if (number === viewer.currentPageNumber) showStatus(error ? `PDF 页面渲染失败：${error.message}` : "");
   });
-  eventBus.on("pagechanging", ({ pageNumber: number, pageLabel }) => { showPage(number); if (!syncing && !initializing) vscode.postMessage({ type: "pdfPageChange", pageNumber: number, pageLabel }); });
+  eventBus.on("pagechanging", ({ pageNumber: number, pageLabel }) => {
+    showPage(number);
+    if (!syncing && !initializing) {
+      if (pending) pending = { ...pending, pageLabel: pageLabel || String(number) };
+      persistState();
+      vscode.postMessage({ type: "pdfPageChange", pageNumber: number, pageLabel });
+    }
+  });
   eventBus.on("scalechanging", ({ scale, presetValue }) => { saveState({ scale: presetValue || String(scale) }); zoom.value = `${scalePercent(scale)}%`; });
 
   document.querySelector("#minus").onclick = () => viewer.decreaseScale();
+  document.querySelector("#copyImage").onclick = copyCurrentImage;
   document.querySelector("#plus").onclick = () => viewer.increaseScale();
   zoom.onfocus = () => zoom.select();
   zoom.onkeydown = event => {
@@ -246,7 +332,18 @@ async function init() {
   document.querySelector("#reset").onclick = () => { saveState(DEFAULTS); applyDisplaySettings(); applyDirection(); if (viewer?.pdfDocument) viewer.currentScaleValue = DEFAULTS.scale; };
 
   applyDisplaySettings(); applyDirection(); showPage();
-  window.addEventListener("message", event => { if (event.data?.type === "showPdf") loadPdf(event.data); });
-  vscode.postMessage({ type: "ready", document: stored.document });
+  const ready = () => vscode.postMessage({ type: "ready", document: pending || stored.document });
+  // Startup messages can be lost while the extension host is restarting.
+  // Retry until acknowledged; a retained frame also answers the new host's probe.
+  const handshake = setInterval(ready, 1000);
+  window.addEventListener("pagehide", () => clearInterval(handshake), { once: true });
+  window.addEventListener("message", event => {
+    if (event.data?.type === "requestReady") ready();
+    if (event.data?.type === "showPdf") {
+      clearInterval(handshake);
+      loadPdf(event.data);
+    }
+  });
+  ready();
 }
 init().catch(error => showStatus(`PDF.js 初始化失败：${error.message}`));

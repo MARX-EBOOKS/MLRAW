@@ -1,5 +1,5 @@
-:root { color-scheme: light; font-family: "Segoe UI", Arial, sans-serif; --bg:#fff; --panel:#fbfcfe; --line:#d8dee8; --ink:#1d2430; --muted:#637083; --soft:#f5f7fa; --hover:#eaf1ff; --field:#fff; --sel:#bfd7ff; --tag:#1167b1; --attr:#7a3e9d; --string:#a31515; --punct:#56606c; --comment:#008000; --text:#1d2430; }
-body.dark { color-scheme: dark; --bg:#111827; --panel:#172033; --line:#344155; --ink:#e5e7eb; --muted:#a7b0c0; --soft:#0f172a; --hover:#243653; --field:#0b1220; --sel:#264f78; --tag:#4ec9b0; --attr:#9cdcfe; --string:#ce9178; --punct:#808080; --comment:#6a9955; --text:#d4d4d4; }
+:root { color-scheme: light; font-family: "Segoe UI", Arial, sans-serif; --bg:#fff; --panel:#fbfcfe; --line:#d8dee8; --ink:#1d2430; --muted:#637083; --soft:#f5f7fa; --hover:#eaf1ff; --field:#fff; --sel:#bfd7ff; --tag:#1167b1; --attr:#7a3e9d; --string:#a31515; --comment:#008000; --text:#1d2430; }
+body.dark { color-scheme: dark; --bg:#111827; --panel:#172033; --line:#344155; --ink:#e5e7eb; --muted:#a7b0c0; --soft:#0f172a; --hover:#243653; --field:#0b1220; --sel:#264f78; --tag:#4ec9b0; --attr:#9cdcfe; --string:#ce9178; --comment:#6a9955; --text:#d4d4d4; }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; color: var(--ink); background: var(--bg); }
 header { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
@@ -51,17 +51,6 @@ body.dark .dialogError { color: #ff8a80; }
 .tabClose { border: 0; padding: 0 2px; border-radius: 3px; background: transparent; color: inherit; line-height: 1; }
 .tabClose:hover { background: var(--hover); border: 0; }
 .editorWrap { position: relative; flex: 1; min-height: 0; background: var(--bg); overflow: hidden; }
-#highlight, #editor { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; border: 0; padding: 14px; overflow: auto; font: 14px/1.45 Consolas, "Cascadia Mono", monospace; letter-spacing: 0; tab-size: 2; white-space: pre-wrap; word-wrap: break-word; }
-#highlight { pointer-events: none; color: var(--text); background: var(--bg); }
-#editor { resize: none; outline: 0; background: transparent; color: transparent; caret-color: var(--ink); }
-#editor::placeholder { color: var(--muted); }
-#editor::selection { background: var(--sel); color: var(--ink); }
-.tok-tag { color: var(--tag); }
-.tok-attr { color: var(--attr); }
-.tok-string { color: var(--string); }
-.tok-link { color: var(--string); text-decoration-line: underline; text-decoration-style: solid; text-underline-offset: 2px; }
-.tok-punct { color: var(--punct); }
-.tok-comment { color: var(--comment); }
 iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
 /* Editor chrome uses the existing light and dark palette. */
 body { display: flex; flex-direction: column; overflow: hidden; }
