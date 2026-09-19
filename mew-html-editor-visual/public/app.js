@@ -40,6 +40,33 @@ const readerSession = (() => {
   return /^[\w-]{1,128}$/.test(value) ? value : '';
 })();
 let readerChannel = null;
+let combining = false;
+
+async function saveAndCloseForReader(requestId) {
+  if (combining) return;
+  combining = true;
+  const channel = readerChannel;
+  const closed = () => channel?.postMessage({ source: 'editor', type: 'editor-combined', requestId });
+  try {
+    // Revisit earlier tabs if they were edited while a later tab was saving.
+    do {
+      for (const d of state.docs.values()) await d.saveUntilClean();
+    } while ([...state.docs.values()].some(d => d.dirty));
+    markDirty(true);
+    window.addEventListener('pagehide', closed, { once: true });
+    window.close();
+    setTimeout(() => {
+      window.removeEventListener('pagehide', closed);
+      combining = false;
+      channel?.postMessage({ source: 'editor', type: 'editor-combine-failed', requestId,
+        error: '文件已保存，但浏览器未允许关闭独立编辑窗口' });
+    }, 500);
+  } catch (error) {
+    combining = false;
+    note(error.message);
+    channel?.postMessage({ source: 'editor', type: 'editor-combine-failed', requestId, error: error.message });
+  }
+}
 
 function announceEditorPage() {
   if (!readerChannel || !state.path) return;
@@ -50,15 +77,12 @@ function startReaderSync() {
   if (!readerSession) return;
   readerChannel = createChannel(readerSession, message => {
     if (!message || message.source !== 'reader') return;
+    if (message.type === 'reader-combine') return saveAndCloseForReader(message.requestId);
+    if (combining) return;
     if (message.type === 'reader-page' && message.path) {
       if (message.path === state.path) return announceEditorPage();
       openFile(message.path);
     } else if (message.type === 'reader-ready') announceEditorPage();
-    else if (message.type === 'reader-detached') {
-      readerChannel?.close();
-      readerChannel = null;
-      note('阅读器已恢复合窗；本编辑器继续独立运行');
-    }
   });
   readerChannel.postMessage({ source: 'editor', type: 'editor-ready' });
   ui.setReaderLinkedTitle();

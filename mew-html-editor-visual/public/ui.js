@@ -285,6 +285,7 @@
     const tagPanel = window.MewTagPanel.mount({
       content: '#tagBar',
       host: '.editorPane',
+      keepFloatingInViewport: true,
       storageKey,
       initialEditorScale: oldLayout.editorScale,
       initialTagScale: oldLayout.scale,
@@ -341,23 +342,10 @@
     document.body.classList.toggle('dark', on);
     localStorage.setItem('mewDark', on ? '1' : '0');
     $('darkBtn').textContent = on ? 'Light' : 'Dark';
-    const style = getComputedStyle(document.body);
-    const color = name => style.getPropertyValue('--' + name).trim().replace(/^#([a-f0-9])([a-f0-9])([a-f0-9])$/i, '#$1$1$2$2$3$3');
     monaco.editor.defineTheme('mew', {
       base: on ? 'vs-dark' : 'vs', inherit: true,
-      rules: [
-        { token: 'tag', foreground: color('tag').slice(1) },
-        { token: 'attribute.name', foreground: color('attr').slice(1) },
-        { token: 'attribute.value', foreground: color('string').slice(1) },
-        { token: 'comment', foreground: color('comment').slice(1) }
-      ],
-      colors: {
-        'editor.background': color('bg'), 'editor.foreground': color('text'),
-        'editor.selectionBackground': color('sel'), 'editorLineNumber.foreground': color('muted'),
-        'editorWidget.background': color('panel'), 'editorWidget.border': color('line'),
-        'input.background': color('field'), 'input.foreground': color('ink'),
-        'editorCursor.foreground': color('ink')
-      }
+      rules: window.MewEditorCore.vscodeHtmlThemeRules(on),
+      colors: window.MewEditorCore.vscodeEditorThemeColors(on)
     });
     monaco.editor.setTheme('mew');
     onChanged();
@@ -450,9 +438,14 @@
       const tab = event.target.closest('[data-path]');
       if (tab) actions.activateDocument(tab.dataset.path);
     };
-    $('fileMenu').onclick = event => {
-      if (event.target.closest('button')) $('fileMenu').open = false;
-    };
+    document.querySelectorAll('header details.menu').forEach(menu => {
+      menu.onclick = event => {
+        if (event.target.closest('button')) menu.open = false;
+      };
+      menu.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { menu.open = false; menu.querySelector('summary').focus(); }
+      });
+    });
     document.addEventListener('pointerdown', event => closeMenus(event.target.closest('.menu')));
     if (window.MEWBackend) {
       $('newFileBtn').hidden = $('saveAsBtn').hidden = true;
@@ -462,6 +455,61 @@
     }
   }
 
+  function setupHeaderActions() {
+    const header = document.querySelector('body > header');
+    const menu = header.querySelector('.topActions');
+    const inline = header.querySelector('.inlineActions');
+    if (!menu || !inline) return;
+    const panel = menu.querySelector('.menuPanel');
+    const windowActions = [...panel.children];
+    const optionalActions = [...header.children].filter(node =>
+      (node.matches('button') && node.id !== 'findBtn') || node.matches('label'));
+    const slots = optionalActions.map(node => {
+      const slot = document.createComment('header action');
+      node.before(slot);
+      return slot;
+    });
+    let scheduled = false;
+    const observer = new MutationObserver(schedule);
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        observer.disconnect();
+        const focus = document.activeElement;
+        optionalActions.forEach((node, index) => slots[index].after(node));
+        inline.append(...windowActions);
+        inline.hidden = false;
+        menu.hidden = true;
+        const style = getComputedStyle(header);
+        const available = header.clientWidth - parseFloat(style.paddingRight);
+        const fits = node => node.getBoundingClientRect().right - header.getBoundingClientRect().left <= available + 1;
+        if (!fits(inline)) {
+          panel.append(...inline.children);
+          inline.hidden = true;
+          menu.hidden = false;
+          for (const node of [...optionalActions].reverse()) {
+            if (fits(menu)) break;
+            panel.prepend(node);
+          }
+        } else {
+          menu.open = false;
+        }
+        if (focus instanceof HTMLElement && focus !== document.activeElement) {
+          const target = menu.hidden && focus === menu.querySelector('summary')
+            ? inline.querySelector('button')
+            : !menu.open && panel.contains(focus) ? menu.querySelector('summary') : focus;
+          target?.focus({ preventScroll: true });
+        }
+        observer.observe(header, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+      });
+    }
+    new ResizeObserver(schedule).observe(header);
+    document.fonts.ready.then(schedule);
+    schedule();
+  }
+  setupHeaderActions();
   setupLayout();
   window.MewEditorUI = {
     $, note, tree, mountTagPanel, editorScale, renderTabs, renderDocumentState,

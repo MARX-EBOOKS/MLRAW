@@ -196,7 +196,7 @@
     }
   }
 
-  const MIN_SCALE = .8, MAX_SCALE = 1.6, SNAP = 56, CONTROL_HEIGHT = 28;
+  const MIN_SCALE = .8, MAX_SCALE = 1.6, SNAP = 56;
   const DOCKS = [
     ["editor-top", "栏上", "停靠编辑框上方（与编辑框等宽）"],
     ["editor-bottom", "栏下", "停靠编辑框下方（与编辑框等宽）"],
@@ -221,7 +221,8 @@
     let stored = {};
     try { stored = JSON.parse(localStorage.getItem(options.storageKey) || "{}") || {}; } catch {}
     const oldPanel = stored.tagBar || stored.tagPanel || stored;
-    const state = Object.assign({ dock: "editor-top", x: 60, y: 96, w: 520, h: null, scale: 1 }, oldPanel);
+    const state = Object.assign({ dock: "editor-top", x: 60, y: 96, w: 520, scale: 1 }, oldPanel);
+    delete state.h; // Ignore heights saved before automatic content sizing.
     if (state.dock === "top") state.dock = "editor-top";
     if (state.dock === "bottom") state.dock = "editor-bottom";
     if (!DOCKS.some(item => item[0] === state.dock)) state.dock = "editor-top";
@@ -239,13 +240,13 @@
     const actions = node("span", "fp-actions");
     actions.setAttribute("role", "group");
     actions.setAttribute("aria-label", "编辑按钮与编辑框尺寸及停靠位置");
-    header.append(node("span", "fp-grip", "≡"), title, actions);
-    const hideButton = makeButton("×", "隐藏标签编辑框", "fp-hide");
+    header.append(node("span", "fp-grip", "≡"), title);
+    const hideButton = makeButton("×", "隐藏标签编辑框（Ctrl+Alt+M 重新打开）", "fp-hide");
     header.append(hideButton);
     hideButton.addEventListener("click", () => setVisible(false));
     content.classList.add("tag-bar");
     content.parentNode.insertBefore(panel, content);
-    panel.append(header, content);
+    panel.append(header, content, actions);
 
     const makeScale = (target, label) => {
       const group = node("span", "fp-scale-actions");
@@ -261,7 +262,7 @@
     };
     actions.append(makeScale("editor", "编辑框"), makeScale("tag", "标签按钮"));
     for (const [dock, label, tip] of DOCKS) actions.append(makeButton(label, tip, "fp-dock", { dock }));
-    for (const dir of ["n", "s", "e", "w", "ne", "nw", "se", "sw"]) {
+    for (const dir of ["e", "w"]) {
       const handle = node("div", `fp-handle fp-handle-${dir}`);
       handle.dataset.dir = dir;
       panel.append(handle);
@@ -273,14 +274,8 @@
       header: Math.round(document.querySelector(options.headerSelector || "header")?.getBoundingClientRect().height || 0),
       footer: Math.round(document.querySelector(options.footerSelector || "footer")?.getBoundingClientRect().height || 0)
     });
-    const minHeight = () => Math.ceil((header.getBoundingClientRect().height || 29) + CONTROL_HEIGHT * state.scale);
-    const heightLimit = () => {
-      const chrome = chromeHeights();
-      if (state.dock.startsWith("editor-")) return Math.max(minHeight(), host.getBoundingClientRect().height - 40);
-      return Math.max(minHeight(), innerHeight - chrome.header - chrome.footer);
-    };
     const save = () => {
-      try { localStorage.setItem(options.storageKey, JSON.stringify({ dock: state.dock, x: Math.round(state.x), y: Math.round(state.y), w: Math.round(state.w), h: state.h == null ? null : Math.round(state.h), scale: state.scale, editorScale })); } catch {}
+      try { localStorage.setItem(options.storageKey, JSON.stringify({ dock: state.dock, x: Math.round(state.x), y: Math.round(state.y), w: Math.round(state.w), scale: state.scale, editorScale })); } catch {}
     };
     const updateScale = target => {
       const value = target === "editor" ? editorScale : state.scale;
@@ -292,7 +287,7 @@
       if (target === "editor") options.setEditorScale?.(editorScale);
       else {
         panel.style.setProperty("--fp-scale", state.scale);
-        panel.style.setProperty("--fp-content-min-height", `${Math.ceil(CONTROL_HEIGHT * state.scale)}px`);
+
       }
     };
     const updateWindowDock = () => {
@@ -311,20 +306,19 @@
       if (state.dock !== "floating") return;
       const chrome = chromeHeights();
       state.w = clamp(state.w, 220, innerWidth);
-      state.h = clamp(state.h || panel.getBoundingClientRect().height || 80, minHeight(), innerHeight - chrome.header - chrome.footer);
-      state.x = clamp(state.x, 36 - state.w, innerWidth - 36);
-      state.y = clamp(state.y, chrome.header, innerHeight - chrome.footer - 28);
-      Object.assign(panel.style, { left: `${state.x}px`, top: `${state.y}px`, width: `${state.w}px`, height: `${state.h}px` });
+      panel.style.width = `${state.w}px`;
+      const height = panel.getBoundingClientRect().height;
+      state.x = options.keepFloatingInViewport
+        ? clamp(state.x, 0, innerWidth - state.w)
+        : clamp(state.x, 36 - state.w, innerWidth - 36);
+      state.y = clamp(state.y, chrome.header, innerHeight - chrome.footer - (options.keepFloatingInViewport ? height : 28));
+      Object.assign(panel.style, { left: `${state.x}px`, top: `${state.y}px`, width: `${state.w}px` });
     };
     const apply = () => {
-      panel.className = `float-panel ${state.dock === "floating" ? "floating" : `dock-${state.dock}`}`;
+      panel.className = `float-panel auto-height ${state.dock === "floating" ? "floating" : `dock-${state.dock}`}`;
       host.classList.toggle("bar-bottom", !panel.hidden && state.dock === "editor-bottom");
       host.classList.toggle("bar-fixed", panel.hidden || state.dock.startsWith("window-") || state.dock === "floating");
       panel.style.left = panel.style.top = panel.style.right = panel.style.bottom = panel.style.width = "";
-      let height = state.h;
-      if (height != null) height = state.h = clamp(height, minHeight(), heightLimit());
-      panel.style.height = height == null ? "" : `${height}px`;
-      panel.classList.toggle("auto-height", height == null);
       updateScale("tag");
       clampFloating();
       panel.querySelectorAll(".fp-dock").forEach(button => {
@@ -337,7 +331,7 @@
     const floatPanel = () => {
       if (state.dock === "floating") return;
       const rect = panel.getBoundingClientRect();
-      Object.assign(state, { dock: "floating", x: rect.left, y: rect.top, w: Math.min(620, rect.width), h: state.h ?? Math.round(rect.height) });
+      Object.assign(state, { dock: "floating", x: rect.left, y: rect.top, w: Math.min(620, rect.width) });
     };
     const setDock = dock => { if (dock === "floating") floatPanel(); state.dock = DOCKS.some(item => item[0] === dock) ? dock : "editor-top"; apply(); save(); };
     const track = (move, finish) => {
@@ -364,18 +358,13 @@
     for (const handle of panel.querySelectorAll(".fp-handle")) handle.addEventListener("pointerdown", event => {
       if (event.button !== 0) return;
       event.preventDefault(); event.stopPropagation();
-      const dir = handle.dataset.dir, rect = panel.getBoundingClientRect(), startX = event.clientX, startY = event.clientY;
-      const base = { x: rect.left, y: rect.top, w: rect.width, h: rect.height };
+      const dir = handle.dataset.dir, rect = panel.getBoundingClientRect(), startX = event.clientX;
       const move = ev => {
-        const dx = ev.clientX - startX, dy = ev.clientY - startY;
-        let { x, y, w, h } = base;
-        if (dir.includes("e")) w = clamp(base.w + dx, 220, innerWidth - x);
-        if (dir.includes("w")) { w = clamp(base.w - dx, 220, base.x + base.w); x = base.x + base.w - w; }
-        if (dir.includes("s")) h = clamp(base.h + dy, minHeight(), heightLimit());
-        if (dir.includes("n")) { h = clamp(base.h - dy, minHeight(), heightLimit()); y = base.y + base.h - h; }
-        Object.assign(state, { x, y, w, h });
-        if (state.dock === "floating") Object.assign(panel.style, { left: `${x}px`, top: `${y}px`, width: `${w}px` });
-        panel.style.height = `${h}px`; updateWindowDock();
+        const dx = ev.clientX - startX;
+        state.w = dir === "e" ? clamp(rect.width + dx, 220, innerWidth - rect.left)
+          : clamp(rect.width - dx, 220, rect.right);
+        state.x = dir === "w" ? rect.right - state.w : rect.left;
+        clampFloating(); updateWindowDock();
       };
       track(move, save);
     });
@@ -400,11 +389,14 @@
       input.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); commit(); input.select(); } else if (event.key === "Escape") { event.preventDefault(); restore(); input.blur(); } });
       input.addEventListener("dblclick", () => { setScale(input.dataset.scaleInput, 1); input.select(); });
     }
-    header.addEventListener("dblclick", event => { if (event.target.closest(".fp-actions,button")) return; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, h: null }); apply(); save(); });
+    header.addEventListener("dblclick", event => { if (event.target.closest(".fp-actions,button")) return; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520 }); apply(); save(); });
     let lastScaleTarget = "editor";
     actions.addEventListener("pointerdown", event => { const group = event.target.closest("[data-scale-target]"); if (group) lastScaleTarget = group.dataset.scaleTarget; }, true);
     const bindShortcuts = (targetDocument, fixedTarget = null) => {
       const shortcut = event => {
+        if (!event.isComposing && event.ctrlKey && event.altKey && !event.metaKey && !event.shiftKey && event.code === "KeyM") {
+          event.preventDefault(); event.stopPropagation(); setVisible(true); return;
+        }
         const wheel = event.type === "wheel";
         if (!(event.ctrlKey || event.metaKey) || (!wheel && event.altKey)) return;
         const direction = wheel ? (event.deltaY < 0 ? 1 : -1) : ["Equal", "NumpadAdd"].includes(event.code) || event.key === "+" ? 1 : ["Minus", "NumpadSubtract"].includes(event.code) || event.key === "-" ? -1 : 0;
@@ -421,22 +413,30 @@
       if (event.detail?.document) bindShortcuts(event.detail.document, "editor");
     });
     updateScale("editor"); apply();
+    new ResizeObserver(() => {
+      clampFloating();
+      updateWindowDock();
+    }).observe(panel);
     window.addEventListener("resize", () => { clampFloating(); updateWindowDock(); });
     window.addEventListener(options.chromeResizeEvent || "reader-chrome-resize", updateWindowDock);
     for (const eventName of options.layoutEvents || []) window.addEventListener(eventName, updateWindowDock);
-    window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, h: null, scale: 1 }); updateScale("editor"); apply(); save(); });
+    window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, scale: 1 }); updateScale("editor"); apply(); save(); });
+    const toggle = document.getElementById("tagPanelToggle");
+    if (toggle) {
+      toggle.title = "打开标签编辑框（Ctrl+Alt+T）";
+      toggle.setAttribute("aria-keyshortcuts", "Control+Alt+T");
+    }
     const setVisible = visible => {
       panel.hidden = !visible;
       host.classList.toggle("bar-bottom", visible && state.dock === "editor-bottom");
       host.classList.toggle("bar-fixed", !visible || state.dock.startsWith("window-") || state.dock === "floating");
-      const toggle = document.getElementById("tagPanelToggle");
       if (toggle) {
         toggle.textContent = `${visible ? "隐藏" : "打开"}标签编辑框`;
         toggle.setAttribute("aria-expanded", String(visible));
       }
       updateWindowDock();
     };
-    document.getElementById("tagPanelToggle")?.addEventListener("click", () => setVisible(panel.hidden));
+    toggle?.addEventListener("click", () => setVisible(panel.hidden));
     return { panel, setDock, setScale, setVisible, state };
   }
   window.MewTagPanel = { mount, tags, attrs, tagMap, blockTagNames, TagEditor };

@@ -25,7 +25,7 @@
   const PDF_SETTINGS_KEY = "readerPdfSettings.v1";
   const PDF_DEFAULTS = { brightness: 100, paper: "#ffffff", ink: "#000000", invert: false, horizontal: false, scale: "page-width" };
   let pdfSettings = { ...PDF_DEFAULTS };
-  const PDF_DIRECT_HTML = `<svg aria-hidden="true" width="0" height="0"><filter id="scanColorFilter" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR id="filterR" type="table" tableValues="0 1"/><feFuncG id="filterG" type="table" tableValues="0 1"/><feFuncB id="filterB" type="table" tableValues="0 1"/></feComponentTransfer></filter></svg><div class="pdf-tools"><div class="pdf-group"><button id="direction" type="button">左右翻页</button><button id="settings" type="button">显示设置</button></div><div class="pdf-group pdf-zoom"><button id="zoomOut" type="button" aria-label="缩小 PDF" title="缩小 PDF（Ctrl+−）">−</button><input id="zoomValue" type="text" inputmode="decimal" maxlength="8" value="页宽" aria-label="PDF 缩放比例" title="输入 25%–1000% 并按回车；输入“页宽”恢复适合页宽；PDF 区域支持 Ctrl+滚轮及 Ctrl+＋/−"><button id="zoomIn" type="button" aria-label="放大 PDF" title="放大 PDF（Ctrl+＋）">＋</button></div><button id="full" type="button">全屏</button></div><div id="stage"><div id="viewer" class="pdfViewer"></div><p id="missing">正在载入 PDF…</p></div><dialog id="settingsDialog"><form method="dialog"><header><strong>扫描件显示设置</strong><button value="close">×</button></header><label>亮度 <output id="brightnessValue"></output><input id="brightness" type="range" min="50" max="160"></label><label>背景色 <input id="paper" type="color"></label><label>文字色 <input id="ink" type="color"></label><label class="toggle"><input id="invert" type="checkbox">反色</label><footer><button id="reset" type="button">恢复默认</button><button value="close">完成</button></footer></form></dialog>`;
+  const PDF_DIRECT_HTML = `<svg aria-hidden="true" width="0" height="0"><filter id="scanColorFilter" color-interpolation-filters="sRGB"><feComponentTransfer><feFuncR id="filterR" type="table" tableValues="0 1"/><feFuncG id="filterG" type="table" tableValues="0 1"/><feFuncB id="filterB" type="table" tableValues="0 1"/></feComponentTransfer></filter></svg><div class="pdf-tools"><div class="pdf-group"><button id="direction" type="button">左右翻页</button><button id="settings" type="button">显示设置</button></div><div class="pdf-tools-end"><div class="pdf-group pdf-zoom"><button id="zoomOut" type="button" aria-label="缩小 PDF" title="缩小 PDF（Ctrl+−）">−</button><input id="zoomValue" type="text" inputmode="decimal" maxlength="8" value="页宽" aria-label="PDF 缩放比例" title="输入 25%–1000% 并按回车；输入“页宽”恢复适合页宽；PDF 区域支持 Ctrl+滚轮及 Ctrl+＋/−"><button id="zoomIn" type="button" aria-label="放大 PDF" title="放大 PDF（Ctrl+＋）">＋</button></div></div></div><div id="stage"><div id="viewer" class="pdfViewer"></div><p id="missing">正在载入 PDF…</p></div><dialog id="settingsDialog"><form method="dialog"><header><strong>扫描件显示设置</strong><button value="close">×</button></header><label>亮度 <output id="brightnessValue"></output><input id="brightness" type="range" min="50" max="160"></label><label>背景色 <input id="paper" type="color"></label><label>文字色 <input id="ink" type="color"></label><label class="toggle"><input id="invert" type="checkbox">反色</label><footer><button id="reset" type="button">恢复默认</button><button value="close">完成</button></footer></form></dialog>`;
 
   function emit(name, ...args) {
     return listeners[name]?.(...args);
@@ -34,6 +34,89 @@
   function bind(id, event, handler) {
     byId(id)?.addEventListener(event, handler);
   }
+
+  function setupHeaderActions() {
+    const header = document.querySelector('.site-header');
+    const actions = header.querySelector('.actions');
+    const menu = header.querySelector('.topActions');
+    const panel = menu.querySelector('.menuPanel');
+    const navigation = element('div', 'reader-navigation');
+    navigation.append(byId('volumeSelect'), actions.querySelector('.action-group-page'));
+    navigation.hidden = true;
+    header.append(navigation);
+    const nodes = [...actions.children];
+    const slots = nodes.map(node => {
+      const slot = document.createComment('toolbar action');
+      node.before(slot);
+      return slot;
+    });
+    let scheduled = false;
+    const observer = new MutationObserver(schedule);
+    function schedule() {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        observer.disconnect();
+        const focus = document.activeElement;
+        const pdfTools = pdfFrame.querySelector('.pdf-tools');
+        if (pdfTools && navigation.parentElement !== pdfTools) {
+          pdfTools.append(navigation);
+          navigation.hidden = false;
+        }
+        nodes.forEach((node, index) => slots[index].after(node));
+        header.classList.remove('header-compact');
+        const fits = () => actions.scrollWidth <= actions.clientWidth + 1 &&
+          Math.max(...[...header.children].map(node => node.getBoundingClientRect().right)) <=
+            header.getBoundingClientRect().right - parseFloat(getComputedStyle(header).paddingRight) + 1;
+        if (!fits()) header.classList.add('header-compact');
+        for (const node of [...nodes].reverse()) {
+          if (node.parentElement !== actions) continue;
+          if (fits()) break;
+          panel.prepend(node);
+        }
+        if (focus instanceof HTMLElement && focus !== document.activeElement) {
+          (panel.contains(focus) && !menu.open ? menu.querySelector('summary') : focus).focus({ preventScroll: true });
+        }
+        observer.observe(header, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+      });
+    }
+    menu.addEventListener('click', event => {
+      if (event.target.closest('button')) menu.open = false;
+    });
+    menu.addEventListener('keydown', event => {
+      if (event.key === 'Escape') { menu.open = false; menu.querySelector('summary').focus(); }
+    });
+    document.addEventListener('pointerdown', event => {
+      if (!menu.contains(event.target)) menu.open = false;
+    });
+    new ResizeObserver(schedule).observe(header);
+    const pdfToolsResize = new ResizeObserver(entries => {
+      for (const { target } of entries) {
+        pdfFrame.style.setProperty('--pdf-toolbar-height', `${target.getBoundingClientRect().height}px`);
+      }
+    });
+    const watchPdfTools = () => {
+      const toolbar = pdfFrame.querySelector('.pdf-tools');
+      if (toolbar) { pdfToolsResize.observe(toolbar); schedule(); }
+    };
+    new MutationObserver(watchPdfTools).observe(pdfFrame, { childList: true });
+    watchPdfTools();
+    window.addEventListener('reader-toolbar-layout', schedule);
+    document.fonts.ready.then(schedule);
+    schedule();
+  }
+  setupHeaderActions();
+  bind("full", "click", () => {
+    (document.fullscreenElement ? document.exitFullscreen() : root.requestFullscreen())
+      .catch(error => notify(error.message, true));
+  });
+  document.addEventListener("fullscreenchange", () => {
+    const fullscreen = Boolean(document.fullscreenElement);
+    byId("full").textContent = fullscreen ? "退出全屏" : "全屏";
+    byId("full").setAttribute("aria-pressed", String(fullscreen));
+    requestAnimationFrame(() => pdfViewer?.update());
+  });
 
   function setToc(open) {
     root.classList.toggle("toc-open", open);
@@ -52,20 +135,12 @@
   function initMonaco(api) {
     if (source) return source.editor;
     monacoApi = api;
-    const themes = [
-      ["reader-light", "vs", { bg: "#fbfcfe", ink: "#27231f", selection: "#add6ff80", muted: "#716b64", panel: "#ffffff", line: "#d9d2c8" }],
-      ["reader-dark", "vs-dark", { bg: "#1e1e1e", ink: "#eeeeee", selection: "#264f78", muted: "#aaaaaa", panel: "#242424", line: "#444444" }]
-    ];
-    for (const [name, base, color] of themes) {
+    const themes = [["reader-light", "vs"], ["reader-dark", "vs-dark"]];
+    for (const [name, base] of themes) {
+      const dark = base === "vs-dark";
       monacoApi.editor.defineTheme(name, {
-        base, inherit: true, rules: [],
-        colors: {
-          "editor.background": color.bg, "editor.foreground": color.ink,
-          "editor.selectionBackground": color.selection, "editorLineNumber.foreground": color.muted,
-          "editorWidget.background": color.panel, "editorWidget.border": color.line,
-          "input.background": color.panel, "input.foreground": color.ink,
-          "editorCursor.foreground": color.ink
-        }
+        base, inherit: true, rules: MewEditorCore.vscodeHtmlThemeRules(dark),
+        colors: MewEditorCore.vscodeEditorThemeColors(dark)
       });
     }
     source = new MewEditorCore.MonacoController(monacoApi, monacoHost, {
@@ -98,9 +173,9 @@
     if (!doc?.body) return;
     const dark = body.classList.contains("dark");
     doc.documentElement.style.colorScheme = dark ? "dark" : "light";
-    doc.documentElement.style.setProperty("--reader-bg", dark ? "#1e1e1e" : "#ffffff");
-    doc.documentElement.style.setProperty("--reader-ink", dark ? "#d4d4d4" : "#251f1b");
-    doc.documentElement.style.setProperty("--reader-link", dark ? "#4fc1ff" : "#8f2923");
+    doc.documentElement.style.setProperty("--reader-bg", dark ? "#121314" : "#ffffff");
+    doc.documentElement.style.setProperty("--reader-ink", dark ? "#bbbebf" : "#202020");
+    doc.documentElement.style.setProperty("--reader-link", dark ? "#48a0c7" : "#0069cc");
     doc.documentElement.style.zoom = editorScale;
   }
 
@@ -130,6 +205,7 @@
       ? (readerOnly ? "打开或重新聚焦联控编辑器窗口" : "用独立窗口打开编辑器，并把本窗口切换为纯阅读器")
       : "当前阅读器配置没有可用的本地编辑目录";
     splitter.hidden = readerOnly;
+    window.dispatchEvent(new Event("reader-toolbar-layout"));
     requestAnimationFrame(() => {
       pdfViewer?.update();
       syncChromeMetrics();
@@ -457,6 +533,7 @@
   }
   function initPdfFrame() {
     pdfFrame.innerHTML = PDF_DIRECT_HTML;
+    window.dispatchEvent(new Event("reader-toolbar-layout"));
     pdfFrame.addEventListener("contextmenu", event => {
       const page = event.target.closest?.(".pdfViewer .page");
       pdfContextPageNumber = event.target instanceof HTMLCanvasElement && page ? Number(page.dataset.pageNumber) : null;
@@ -484,8 +561,7 @@
       frameId("zoomIn").onclick = () => changePdfScale(1); frameId("zoomOut").onclick = () => changePdfScale(-1);
       bindScaleInput(frameId("zoomValue"), applyPdfScaleInput, showPdfScaleValue);
       frameId("zoomValue").ondblclick = () => { if (pdfViewer) pdfViewer.currentScaleValue = "page-width"; };
-      frameId("direction").onclick = () => changePdfSettings({ horizontal: !pdfSettings.horizontal }); frameId("settings").onclick = () => frameId("settingsDialog").showModal(); frameId("brightness").oninput = (event) => changePdfSettings({ brightness: event.target.value }); frameId("paper").oninput = (event) => changePdfSettings({ paper: event.target.value }); frameId("ink").oninput = (event) => changePdfSettings({ ink: event.target.value }); frameId("invert").onchange = (event) => changePdfSettings({ invert: event.target.checked }); frameId("reset").onclick = () => changePdfSettings(PDF_DEFAULTS); frameId("full").onclick = () => (document.fullscreenElement ? document.exitFullscreen() : pdfFrame.requestFullscreen()).catch((error) => notify(error.message, true));
-      document.addEventListener("fullscreenchange", () => { frameId("full").textContent = document.fullscreenElement ? "退出全屏" : "全屏"; requestAnimationFrame(() => pdfViewer?.update()); });
+      frameId("direction").onclick = () => changePdfSettings({ horizontal: !pdfSettings.horizontal }); frameId("settings").onclick = () => frameId("settingsDialog").showModal(); frameId("brightness").oninput = (event) => changePdfSettings({ brightness: event.target.value }); frameId("paper").oninput = (event) => changePdfSettings({ paper: event.target.value }); frameId("ink").oninput = (event) => changePdfSettings({ ink: event.target.value }); frameId("invert").onchange = (event) => changePdfSettings({ invert: event.target.checked }); frameId("reset").onclick = () => changePdfSettings(PDF_DEFAULTS);
       if (pendingPdfOptions) setPdf(pendingPdfOptions);
     })().catch((error) => notify(error.message, true));
   }

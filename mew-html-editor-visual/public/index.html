@@ -6,8 +6,7 @@
   <title>MEW Monaco Editor</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2224%22 font-size=%2224%22>✎</text></svg>">
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="monaco-workbench.css">
-  <link rel="stylesheet" href="tag-panel.css">
+<link rel="manifest" href="titlebar-test-editor.json">
 </head>
 <body>
   <header>
@@ -32,14 +31,18 @@
     <button id="tagPanelToggle" type="button" aria-controls="tagPanel" aria-expanded="true">隐藏标签编辑框</button>
     <button id="darkBtn" title="Toggle dark mode">Dark</button>
     <label title="When on, single keys insert tags instead of typing letters"><input id="instant" type="checkbox"> instant keys</label>
-    <span class="topActions">
-      <button id="prevFileBtn" title="切换到文件夹中的上一个文件">← 上一文件</button>
-      <button id="nextFileBtn" title="切换到文件夹中的下一个文件">下一文件 →</button>
+    <button id="prevFileBtn" title="切换到文件夹中的上一个文件">← 上一文件</button>
+    <button id="nextFileBtn" title="切换到文件夹中的下一个文件">下一文件 →</button>
+    <div class="inlineActions" hidden></div>
+    <details class="topActions menu">
+      <summary title="窗口操作">更多…</summary>
+      <div class="menuPanel">
       <button id="newWinBtn" title="Open current file in a new editor window">New window</button>
       <button id="closeSavedBtn" title="Close all saved windows (Ctrl+K U)">Close saved</button>
       <button id="closeAllBtn" title="Close all open windows (Ctrl+K W)">Close all</button>
       <button id="fullBtn" title="Toggle fullscreen">Fullscreen</button>
-    </span>
+      </div>
+    </details>
   </header>
   <main>
     <aside id="explorerPane" aria-label="文件资源管理器">
@@ -98,5 +101,6 @@
   <script src="tag-panel.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
+  <script src="titlebar-test.js"></script>
 </body>
 </html>

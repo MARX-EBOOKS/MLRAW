@@ -12,6 +12,8 @@
   if (!ui) throw new Error("ReaderUI 未载入");
 
   const initialParams = new URLSearchParams(location.search);
+  const LAST_VOLUME_KEY = "readerLastVolume";
+  const LAST_PAGE_KEY = "readerLastPage";
   const requestedSession = /^[\w-]{1,128}$/.test(initialParams.get("sync") || "") ? initialParams.get("sync") : "";
 
   const state = {
@@ -31,6 +33,7 @@
   let syncChannel = null;
   let pairedWindow = null;
   let locateRevision = 0;
+  let combineRequest = null;
   const editorPathCache = new Map();
 
   async function api(url, options) {
@@ -65,12 +68,19 @@
 
   async function receiveSyncMessage(message) {
     if (!message || message.source !== "editor" || state.workspaceMode !== "reader") return;
+    if (combineRequest) {
+      if (message.requestId === combineRequest.id) {
+        if (message.type === "editor-combined") combineRequest.resolve();
+        else if (message.type === "editor-combine-failed") combineRequest.reject(new Error(message.error));
+      }
+      return;
+    }
     if (message.type === "editor-ready") return announceReaderPage();
     if (message.type !== "editor-page" || !message.path) return;
     const revision = ++locateRevision;
     try {
       const target = await api(`/api/reader/locate?path=${encodeURIComponent(message.path)}`);
-      if (revision !== locateRevision) return;
+      if (revision !== locateRevision || combineRequest) return;
       if (target.volume !== state.volume || target.page !== state.page) await navigate(target.volume, target.page);
     } catch {
       // Ordinary files may remain open in index.html without moving the PDF.
@@ -260,6 +270,8 @@
       const volumeChanged = state.volume !== volume.id;
       state.volume = volume.id;
       state.page = page;
+      localStorage.setItem(LAST_VOLUME_KEY, state.volume);
+      localStorage.setItem(LAST_PAGE_KEY, String(state.page));
       if (editorPath) editorPathCache.set(`${volume.id}:${page}`, editorPath);
       state.document = document;
       if (!readerOnly) {
@@ -351,6 +363,7 @@
   }
 
   async function enterSplitView() {
+    if (combineRequest) return;
     if (!state.config?.editorAvailable) return ui.notify("当前阅读器配置没有可用的本地编辑目录", true);
     if (!state.syncSession) state.syncSession = newSession();
     const popup = pairedWindow && !pairedWindow.closed
@@ -376,10 +389,26 @@
     return true;
   }
 
-  function restoreCombinedView() {
-    syncChannel?.postMessage({ source: "reader", type: "reader-detached" });
+  async function restoreCombinedView() {
+    if (combineRequest || state.workspaceMode !== "reader") return;
+    ui.notify("正在保存独立编辑器的全部文件并关闭窗口…");
+    let timer;
+    try {
+      await new Promise((resolve, reject) => {
+        combineRequest = { id: newSession(), resolve, reject };
+        timer = setTimeout(() => reject(new Error("独立编辑器未确认关闭，请检查该窗口后重试")), 60000);
+        syncChannel?.postMessage({ source: "reader", type: "reader-combine", requestId: combineRequest.id });
+      });
+    } catch (error) {
+      ui.notify(`未合窗：${error.message}`, true);
+      return;
+    } finally {
+      clearTimeout(timer);
+      combineRequest = null;
+    }
     syncChannel?.close();
     syncChannel = null;
+    pairedWindow = null;
     state.syncSession = "";
     state.workspaceMode = "combined";
     ui.setWorkspaceMode("combined", state.config?.editorAvailable);
@@ -633,10 +662,15 @@
       if (state.workspaceMode === "reader" && !state.syncSession) state.syncSession = newSession();
       ui.setWorkspaceMode(state.workspaceMode, state.config.editorAvailable);
       if (state.workspaceMode === "reader") openSyncChannel();
-      const firstVolume = state.config.volumes.find((item) => item.id === initialParams.get("volume")) || state.config.volumes[0];
+      const rememberedVolume = localStorage.getItem(LAST_VOLUME_KEY);
+      const rememberedPage = Number(localStorage.getItem(LAST_PAGE_KEY));
+      const initialVolume = initialParams.get("volume") || rememberedVolume;
+      const firstVolume = state.config.volumes.find((item) => item.id === initialVolume) || state.config.volumes[0];
       if (!firstVolume) throw new Error("配置中没有找到包含 HTML 页面的卷册");
       ui.renderVolumes(state.config.volumes, firstVolume.id);
-      await navigate(firstVolume.id, Number(initialParams.get("page")) || firstVolume.pages[0], true);
+      const initialPage = Number(initialParams.get("page")) ||
+        (firstVolume.id === rememberedVolume && Number.isFinite(rememberedPage) && rememberedPage > 0 ? rememberedPage : firstVolume.pages[0]);
+      await navigate(firstVolume.id, initialPage, true);
     } catch (error) {
       ui.renderNavigation({
         chapterTitle: "载入失败", chapterPage: null, pageContext: "", pageTotal: "", pageIndex: "",
