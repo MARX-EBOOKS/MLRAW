@@ -358,7 +358,7 @@ body > header .menuPanel button { width: 100%; }
 .site-header.header-compact .brand, .site-header.header-compact .context { display: none; }
 
 #pdfFrame { container-type: inline-size; }
-#pdfFrame .pdf-tools { display: grid; grid-template-columns: minmax(max-content, 1fr) auto minmax(max-content, 1fr); height: auto; min-height: 44px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+#pdfFrame .pdf-tools { display: grid; grid-template-columns: max-content minmax(max-content, 1fr) max-content; height: auto; min-height: 44px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
 #pdfFrame .pdf-tools > .pdf-group { grid-column: 1; grid-row: 1; justify-self: start; }
 #pdfFrame .reader-navigation { grid-column: 2; grid-row: 1; justify-self: center; }
 #pdfFrame .pdf-tools-end { grid-column: 3; grid-row: 1; justify-self: end; }
@@ -379,22 +379,20 @@ body > header .menuPanel button { width: 100%; }
 #pdfFrame .reader-navigation select { height: 31px; padding: 3px 7px; background: var(--panel); color: var(--ink); border-color: var(--line); }
 #pdfFrame #stage { top: var(--pdf-toolbar-height, 44px); }
 
-@container (max-width: 760px) {
-  #pdfFrame .action-group-page { position: relative; gap: 0; }
-  #pdfFrame .page-jump { padding-right: 20px; }
-  #pdfFrame .action-group-page .page-step {
-    position: absolute; right: 1px; z-index: 1;
-    width: 20px; height: 14px; min-height: 0; padding: 0;
-    border: 0; border-left: 1px solid var(--line); border-radius: 0;
-    font-size: 0; line-height: 1; background: transparent;
-  }
-  #pdfFrame #prevBtn { top: 1px; border-radius: 0 5px 0 0; }
-  #pdfFrame #nextPageBtn { bottom: 1px; border-top: 1px solid var(--line); border-radius: 0 0 5px 0; }
-  #pdfFrame .page-step::before { font-size: 10px; }
-  #pdfFrame #prevBtn::before { content: "▲"; }
-  #pdfFrame #nextPageBtn::before { content: "▼"; }
-  #pdfFrame .page-step:hover:not(:disabled) { background: var(--hover); }
+#pdfFrame .pdf-tools.compact-navigation .action-group-page { position: relative; gap: 0; }
+#pdfFrame .pdf-tools.compact-navigation .page-jump { padding-right: 20px; }
+#pdfFrame .pdf-tools.compact-navigation .action-group-page .page-step {
+  position: absolute; right: 1px; z-index: 1;
+  width: 20px; height: 14px; min-height: 0; padding: 0;
+  border: 0; border-left: 1px solid var(--line); border-radius: 0;
+  font-size: 0; line-height: 1; background: transparent;
 }
+#pdfFrame .pdf-tools.compact-navigation #prevBtn { top: 1px; border-radius: 0 5px 0 0; }
+#pdfFrame .pdf-tools.compact-navigation #nextPageBtn { bottom: 1px; border-top: 1px solid var(--line); border-radius: 0 0 5px 0; }
+#pdfFrame .pdf-tools.compact-navigation .page-step::before { font-size: 10px; }
+#pdfFrame .pdf-tools.compact-navigation #prevBtn::before { content: "▲"; }
+#pdfFrame .pdf-tools.compact-navigation #nextPageBtn::before { content: "▼"; }
+#pdfFrame .pdf-tools.compact-navigation .page-step:hover:not(:disabled) { background: var(--hover); }
 
 /* Reserve thin scrollbars in the PDF toolbar and reading area. */
 

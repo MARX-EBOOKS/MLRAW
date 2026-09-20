@@ -3,7 +3,7 @@ let editor, monaco, source, previewTimer = 0, openRevision = 0, closing = false;
 const PREVIEW_DELAY = 200, TAG_PANEL_KEY = 'mewMonacoTagPanel.v1';
 const ui = window.MewEditorUI;
 if (!ui) throw new Error('MewEditorUI 未载入');
-const { $, note } = ui;
+const { byId, notify } = ui;
 const state = { path: "", docs: new Map(), cssText: "" };
 const core = window.MewEditorCore;
 if (!core) throw new Error('MewEditorCore 未载入');
@@ -35,17 +35,17 @@ function handleWorkbenchChord(event) {
   clearTimeout(workbenchChordTimer);
   workbenchChordTimer = setTimeout(() => { workbenchChordPending = false; }, 2000);
 }
-const readerSession = (() => {
+const syncSession = (() => {
   const value = new URLSearchParams(location.search).get('readerSession') || '';
   return /^[\w-]{1,128}$/.test(value) ? value : '';
 })();
-let readerChannel = null;
+let syncChannel = null;
 let combining = false;
 
 async function saveAndCloseForReader(requestId) {
   if (combining) return;
   combining = true;
-  const channel = readerChannel;
+  const channel = syncChannel;
   const closed = () => channel?.postMessage({ source: 'editor', type: 'editor-combined', requestId });
   try {
     // Revisit earlier tabs if they were edited while a later tab was saving.
@@ -63,19 +63,19 @@ async function saveAndCloseForReader(requestId) {
     }, 500);
   } catch (error) {
     combining = false;
-    note(error.message);
+    notify(error.message);
     channel?.postMessage({ source: 'editor', type: 'editor-combine-failed', requestId, error: error.message });
   }
 }
 
 function announceEditorPage() {
-  if (!readerChannel || !state.path) return;
-  readerChannel.postMessage({ source: 'editor', type: 'editor-page', path: state.path, dirty: Boolean(doc()?.dirty) });
+  if (!syncChannel || !state.path) return;
+  syncChannel.postMessage({ source: 'editor', type: 'editor-page', path: state.path, dirty: Boolean(doc()?.dirty) });
 }
 
 function startReaderSync() {
-  if (!readerSession) return;
-  readerChannel = createChannel(readerSession, message => {
+  if (!syncSession) return;
+  syncChannel = createChannel(syncSession, message => {
     if (!message || message.source !== 'reader') return;
     if (message.type === 'reader-combine') return saveAndCloseForReader(message.requestId);
     if (combining) return;
@@ -84,7 +84,7 @@ function startReaderSync() {
       openFile(message.path);
     } else if (message.type === 'reader-ready') announceEditorPage();
   });
-  readerChannel.postMessage({ source: 'editor', type: 'editor-ready' });
+  syncChannel.postMessage({ source: 'editor', type: 'editor-ready' });
   ui.setReaderLinkedTitle();
 }
 function api(url, options) {
@@ -124,23 +124,23 @@ async function newFile() {
   const name = await ui.askFileName({ mode: 'new', directory });
   if (!name) return;
   const path = joinCurrentDirectory(name);
-  if (state.docs.has(path)) return note(`${path} 已经打开`);
+  if (state.docs.has(path)) return notify(`${path} 已经打开`);
   try {
     await createFileAt(path, '');
     await openFile(path);
     ui.tree.scheduleRefresh();
-    note(`Created ${path}`);
-  } catch (error) { note(error.message); }
+    notify(`Created ${path}`);
+  } catch (error) { notify(error.message); }
 }
 async function saveAs() {
   const d = doc();
-  if (!d) return note('Open a file first');
+  if (!d) return notify('Open a file first');
   const directory = currentDirectory();
   const name = await ui.askFileName({ mode: 'saveAs', directory, initialName: d.path.split('/').pop() });
   if (!name) return;
   const target = joinCurrentDirectory(name);
   if (target === d.path) return save();
-  if (state.docs.has(target)) return note(`${target} 已经打开`);
+  if (state.docs.has(target)) return notify(`${target} 已经打开`);
   const snapshot = d.content;
   try {
     const data = await d.enqueue(() => createFileAt(target, snapshot));
@@ -161,8 +161,8 @@ async function saveAs() {
     state.path = d.path;
     switchDoc(d.path);
     ui.tree.scheduleRefresh();
-    note(`Saved as ${d.path}${d.dirty ? '; newer edits remain unsaved' : ''}`);
-  } catch (error) { note(error.message); }
+    notify(`Saved as ${d.path}${d.dirty ? '; newer edits remain unsaved' : ''}`);
+  } catch (error) { notify(error.message); }
 }
 async function openFile(rel) {
   const request = ++openRevision;
@@ -181,17 +181,17 @@ async function openFile(rel) {
       path: rel
     }));
     if (request === openRevision) switchDoc(rel);
-  } catch (error) { note(error.message); }
+  } catch (error) { notify(error.message); }
 }
 async function openSiblingFile(direction) {
-  if (!state.path) return note("Open a file first");
+  if (!state.path) return notify("Open a file first");
   const current = doc();
   if (current?.dirty) {
     try {
       await current.saveUntilClean();
       markDirty();
     } catch (error) {
-      note(`自动保存失败：${error.message}`);
+      notify(`自动保存失败：${error.message}`);
       return;
     }
   }
@@ -202,16 +202,16 @@ async function openSiblingFile(direction) {
     const data = await api(`/api/tree?path=${encodeURIComponent(dir)}`);
     const files = data.entries.filter(entry => entry.type === "file");
     const currentIndex = files.findIndex(entry => entry.name === currentName);
-    if (currentIndex < 0 || files.length < 2) return note("No other file in this folder");
+    if (currentIndex < 0 || files.length < 2) return notify("No other file in this folder");
     const target = files[(currentIndex + direction + files.length) % files.length];
     await openFile(target.path);
   } catch (e) {
-    note(e.message);
+    notify(e.message);
   }
 }
 
 function openFileWindow() {
-  if (!state.path) return note("Open a file first");
+  if (!state.path) return notify("Open a file first");
   const url = new URL(location.href);
   url.searchParams.set("file", state.path);
   url.searchParams.delete("readerSession");
@@ -219,15 +219,15 @@ function openFileWindow() {
 }
 async function save() {
   const d = doc();
-  if (!d) return note("Open a file first");
+  if (!d) return notify("Open a file first");
   const savedText = d.content;
   try {
     const data = await d.save(savedText);
     if (d.path === state.path) markDirty(true);
     else renderTabs();
-    note(`Saved ${data.path}${d.dirty ? "; newer edits remain unsaved" : ""}`);
+    notify(`Saved ${data.path}${d.dirty ? "; newer edits remain unsaved" : ""}`);
   } catch (e) {
-    note(e.message);
+    notify(e.message);
   }
 }
 async function saveAll() {
@@ -237,11 +237,11 @@ async function saveAll() {
     try {
       await d.save(savedText);
     } catch (e) {
-      switchDoc(d.path); note(e.message); return;
+      switchDoc(d.path); notify(e.message); return;
     }
   }
   markDirty(true);
-  note([...state.docs.values()].some(d => d.dirty) ? "Saved snapshots; newer edits remain unsaved" : "Saved all");
+  notify([...state.docs.values()].some(d => d.dirty) ? "Saved snapshots; newer edits remain unsaved" : "Saved all");
 }
 function refreshPreview() {
   clearTimeout(previewTimer);
@@ -267,14 +267,14 @@ async function checkExternalUpdate(path) {
   try {
     const result = await d.refresh();
     if (state.docs.get(path) !== d) return;
-    if (result === "conflict") note(`External update pending for ${d.path}; close and reopen to reload`);
+    if (result === "conflict") notify(`External update pending for ${d.path}; close and reopen to reload`);
     else if (result === "updated") applyExternalUpdate(d);
     else if (result === "saved") {
       if (d.path === state.path) markDirty(true);
       else renderTabs();
     }
   } catch (e) {
-    note(`External file unavailable: ${d.path}`);
+    notify(`External file unavailable: ${d.path}`);
   }
 }
 function scheduleExternalUpdate(path) {
@@ -350,7 +350,8 @@ function switchDoc(path) {
     colorDecorators: ["html", "css", "scss", "less"].includes(language),
     defaultColorDecorators: language === "html" ? "never" : "auto"
   });
-  ui.setLanguage(`${ui.languageLabel(monaco, language)} · UTF-8`);
+  const label = monaco.languages.getLanguages().find(item => item.id === language)?.aliases?.[0] || language;
+  ui.setLanguage(`${label} · UTF-8`);
   if (d.viewState) editor.restoreViewState(d.viewState);
   ui.tree.setActive(path); markDirty(); refreshPreview(); editor.focus();
 }
@@ -367,19 +368,19 @@ function applyExternalUpdate(d) {
   }
   markDirty();
   if (d === doc()) refreshPreview();
-  note(`Updated ${d.path}`);
+  notify(`Updated ${d.path}`);
 }
 function editTag(tag) {
-  if (!doc()) return note('Open a file first');
+  if (!doc()) return notify('Open a file first');
   if (doc().editable) tagEditor.applyTag(tag);
 }
 function insertAttr(attr) {
-  if (!doc()) return note('Open a file first');
+  if (!doc()) return notify('Open a file first');
   if (doc().editable) tagEditor.applyTag(attr);
 }
 function undo() { source.undo(); }
 function redo() { source.redo(); }
-function toggleFindReplace() { return source?.toggleFind(); }
+function toggleFind() { return source?.toggleFind(); }
 async function closeDocs(paths) {
   if (closing) return;
   closing = true;
@@ -393,7 +394,7 @@ async function closeDocs(paths) {
         if (choice === 'cancel' || !choice) break;
         if (choice === 'save') {
           try { await d.saveUntilClean(); }
-          catch (error) { note(error.message); break; }
+          catch (error) { notify(error.message); break; }
         }
       }
       if (state.docs.get(path) !== d) continue;
@@ -416,15 +417,15 @@ async function closeDocs(paths) {
 function closeAll(savedOnly = false) {
   return closeDocs([...state.docs.values()].filter(d => !savedOnly || !d.dirty).map(d => d.path));
 }
-function initialize(api) {
+function setTheme(dark) {
+  ui.setTheme(dark);
+  core.setMonacoTheme(monaco, dark);
+  refreshPreview();
+}
+function initMonaco(api) {
   monaco = api;
-  const scale = ui.editorScale();
-  source = new MonacoController(monaco, $('monacoEditor'), {
-    model: null, automaticLayout: true, fontFamily: 'Consolas, "Cascadia Mono", monospace',
-    fontSize: 14 * scale, lineHeight: Math.round(21 * scale), tabSize: 2, wordWrap: 'on', minimap: { enabled: false },
-    find: { addExtraSpaceOnTop: false },
-    // 0.55.1 occurrence requests can reject on rapid model switches.
-    occurrencesHighlight: 'off', scrollBeyondLastLine: false, padding: { top: 14, bottom: 14 }
+  source = new MonacoController(monaco, byId('monacoEditor'), {
+    scale: ui.editorScale(), dark: localStorage.getItem('mewDark') === '1'
   });
   tagEditor = new tagPanel.TagEditor(source);
   editor = source.editor;
@@ -434,15 +435,20 @@ function initialize(api) {
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, save);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, saveAs);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, newFile);
-  // Capture only tag shortcuts. Monaco handles typing, IME, undo and find itself.
-  $('monacoEditor').addEventListener('keydown', event => {
+  // Capture tag shortcuts and keep closed-find option keys from revealing Monaco's standalone widget.
+  byId('monacoEditor').addEventListener('keydown', event => {
     if (event.isComposing || event.ctrlKey || event.metaKey || !editor.hasTextFocus()) return;
-    if (!event.altKey && !$('instant').checked) return;
-    const tag = tagMap.get(event.key.toLowerCase());
+    if (!event.altKey && !byId('instant').checked) return;
+    const key = event.key.toLowerCase();
+    const findVisible = editor.getDomNode()?.querySelector('.find-widget')?.classList.contains('visible');
+    if (event.altKey && findVisible && ['c', 'w', 'r', 'p'].includes(key)) return;
+    const tag = tagMap.get(key);
     const br = event.altKey && event.key === 'Enter';
-    if (tag || br) {
+    const suppressClosedFindOption = event.altKey && key === 'w';
+    if (tag || br || suppressClosedFindOption) {
       event.preventDefault(); event.stopPropagation();
-      if (tag) editTag(tag); else insertAttr(attrs.find(attr => attr.id === 'BR'));
+      if (tag) editTag(tag);
+      else if (br) insertAttr(attrs.find(attr => attr.id === 'BR'));
     }
   }, true);
   document.addEventListener('keydown', handleWorkbenchChord, true);
@@ -460,24 +466,26 @@ function initialize(api) {
     onEditorScale: value => source?.setScale(value)
   });
   ui.bindWorkbench({
-    newFile, save, saveAs, saveAll, undo, redo, find: toggleFindReplace,
+    submitChanges: window.MEWBackend && (() => window.MEWBackend.submitChanges().catch(error => notify(error.message))),
+    configureGit: () => { location.href = "../git-editor.html"; },
+    newFile, save, saveAs, saveAll, undo, redo, find: toggleFind,
     navigate: openSiblingFile,
     openWindow: openFileWindow,
     closeAll,
-    toggleDark: () => ui.setDark(monaco, !ui.isDark(), refreshPreview),
+    toggleDark: () => setTheme(!ui.isDark()),
     refreshPreview,
     openRaw,
     activePath: () => state.path,
     closeDocuments: closeDocs,
     activateDocument(path) { ++openRevision; switchDoc(path); }
   });
-  ui.setDark(monaco, localStorage.getItem('mewDark') === '1', refreshPreview);
+  setTheme(localStorage.getItem('mewDark') === '1');
   startReaderSync();
   connectFileEvents(); checkCssUpdate();
   const file = new URLSearchParams(location.search).get('file');
   if (file) openFile(file);
   window.addEventListener('beforeunload', event => {
-    readerChannel?.postMessage({ source: 'editor', type: 'editor-closed', path: state.path });
+    syncChannel?.postMessage({ source: 'editor', type: 'editor-closed', path: state.path });
     if ([...state.docs.values()].some(d => d.dirty)) { event.preventDefault(); event.returnValue = ''; }
   });
   window.mewWorkbench = { editor, documents: state.docs, openFile, newFile, saveAs };
@@ -486,10 +494,10 @@ function initialize(api) {
 // loader failure or delay cannot leave the file tree blank.
 ui.tree.configure({
   read: rel => api(`/api/tree?path=${encodeURIComponent(rel)}`),
-  open: rel => editor ? openFile(rel) : note('编辑器仍在加载'),
+  open: rel => editor ? openFile(rel) : notify('编辑器仍在加载'),
   activePath: () => state.path
 });
 ui.tree.refresh();
-core.loadMonaco().then(initialize, error => {
+core.loadMonaco().then(initMonaco, error => {
   ui.showMonacoError(error);
 });

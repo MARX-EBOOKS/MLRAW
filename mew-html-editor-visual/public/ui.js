@@ -1,15 +1,15 @@
 // index.html UI: layout, tree, tabs, preview, theme and workbench controls.
 (() => {
-  const $ = id => document.getElementById(id);
+  const byId = id => document.getElementById(id);
   const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[char]));
   const fileLabel = path => path.split('/').pop() || path || 'Untitled';
 
-  function note(message) {
-    $('status').textContent = message;
+  function notify(message) {
+    byId('status').textContent = message;
     setTimeout(() => {
-      if ($('status').textContent === message) $('status').textContent = '';
+      if (byId('status').textContent === message) byId('status').textContent = '';
     }, 2500);
   }
 
@@ -43,9 +43,9 @@
         const [min, max] = limits(name);
         layout[name] = clamp(layout[name], min, max);
         root.style.setProperty(`--${name}-width`, `${layout[name]}px`);
-        const splitter = $(`${name}Splitter`);
-        const pane = $(name === 'tree' ? 'explorerPane' : 'previewPane');
-        const toggle = $(`${name}PaneToggle`);
+        const splitter = byId(`${name}Splitter`);
+        const pane = byId(name === 'tree' ? 'explorerPane' : 'previewPane');
+        const toggle = byId(`${name}PaneToggle`);
         const open = layout[`${name}Open`];
         root.classList.toggle(`${name}-pane-closed`, !open);
         pane.hidden = !open;
@@ -63,9 +63,9 @@
       persist();
     }
     for (const name of ['tree', 'preview']) {
-      const splitter = $(`${name}Splitter`);
+      const splitter = byId(`${name}Splitter`);
       const direction = name === 'tree' ? 1 : -1;
-      $(`${name}PaneToggle`).addEventListener('click', () => setPaneOpen(name, !layout[`${name}Open`]));
+      byId(`${name}PaneToggle`).addEventListener('click', () => setPaneOpen(name, !layout[`${name}Open`]));
       splitter.addEventListener('pointerdown', event => {
         if (event.button !== 0) return;
         event.preventDefault();
@@ -112,7 +112,7 @@
         persist();
       });
     }
-    $('layoutReset').addEventListener('click', () => {
+    byId('layoutReset').addEventListener('click', () => {
       Object.assign(layout, defaults);
       render();
       persist();
@@ -131,9 +131,9 @@
 
     function configure(nextOptions) { options = nextOptions; }
 
-    async function load(rel = '', host = $('tree'), open = new Set()) {
+    async function load(rel = '', host = byId('tree'), open = new Set()) {
       const data = await options.read(rel);
-      $('rootPath').textContent = data.root;
+      byId('rootPath').textContent = data.root;
       const box = rel ? document.createElement('div') : host;
       if (rel) box.className = 'indent';
       box.innerHTML = '';
@@ -155,7 +155,7 @@
         };
         row.onclick = event => {
           event.stopPropagation();
-          if (entry.type === 'dir') return toggle(row, entry.path).catch(error => note(error.message));
+          if (entry.type === 'dir') return toggle(row, entry.path).catch(error => notify(error.message));
           options.open(entry.path);
         };
         box.append(row);
@@ -201,15 +201,15 @@
         const nextText = nextTree.textContent;
         // Restore the DOM even when a prior render was cleared without changing
         // the directory contents (for example while replacing application UI).
-        if (renderedText !== nextText || !$('tree').childElementCount) {
-          $('tree').replaceChildren(...nextTree.childNodes);
-          if (renderedText) note('File tree updated');
+        if (renderedText !== nextText || !byId('tree').childElementCount) {
+          byId('tree').replaceChildren(...nextTree.childNodes);
+          if (renderedText) notify('File tree updated');
           filter();
         }
         renderedText = nextText;
         retryDelay = 1000;
       } catch (error) {
-        note(`文件树加载失败：${error.message}`);
+        notify(`文件树加载失败：${error.message}`);
         clearTimeout(refreshTimer);
         refreshTimer = setTimeout(refresh, retryDelay);
         retryDelay = Math.min(retryDelay * 2, 10000);
@@ -224,7 +224,7 @@
     }
 
     function filter() {
-      const query = $('treeFilter').value.toLowerCase();
+      const query = byId('treeFilter').value.toLowerCase();
       document.querySelectorAll('#tree .item').forEach(row => {
         row.hidden = row.dataset.type !== 'dir' && !row.dataset.path.toLowerCase().includes(query);
       });
@@ -254,7 +254,7 @@
         const row = document.querySelector(`#tree .item[data-path="${CSS.escape(parent)}"]`);
         if (row && !row.nextElementSibling?.classList.contains('indent')) await toggle(row, parent);
       }
-      $('treeFilter').value = '';
+      byId('treeFilter').value = '';
       filter();
       setActive(path);
       document.querySelector('#tree .active')?.scrollIntoView({ block: 'nearest' });
@@ -264,7 +264,7 @@
   })();
 
   function mountTagPanel({ tags, attrs, storageKey, onTag, onAttr, onNavigate, onEditorScale }) {
-    $('tagBar').innerHTML = [
+    byId('tagBar').innerHTML = [
       ...tags.map((tag, index) => `<button class="tag" data-i="${index}" title="${escapeHtml(tag.title)}">${escapeHtml(tag.label)}</button>`),
       '<span class="spacer"></span>',
       ...attrs.map((attr, index) => `<button class="tag attrTag" data-attr="${index}" title="${escapeHtml(attr.title)}">${escapeHtml(attr.label)}</button>`),
@@ -272,7 +272,7 @@
       '<button id="tagPrevFileBtn" class="tag attrTag tagFileNav" data-nav="-1" title="上一文件；切换前自动保存">←</button>',
       '<button id="tagNextFileBtn" class="tag attrTag tagFileNav" data-nav="1" title="下一文件；切换前自动保存">→</button>'
     ].join('');
-    $('tagBar').onclick = event => {
+    byId('tagBar').onclick = event => {
       const tag = event.target.closest('button[data-i]');
       const attr = event.target.closest('button[data-attr]');
       const nav = event.target.closest('button[data-nav]');
@@ -303,18 +303,18 @@
   }
 
   function renderTabs(documents, active) {
-    const tabs = $('tabs');
+    const tabs = byId('tabs');
     tabs.innerHTML = [...documents].map(document => `<button class="tab${document === active ? ' active' : ''}" data-path="${escapeHtml(document.path)}" title="${escapeHtml(document.path)}"><span class="tabName">${escapeHtml(fileLabel(document.path))}${document.dirty ? ' *' : ''}</span><span class="tabClose" data-close="${escapeHtml(document.path)}" title="Close">×</span></button>`).join('');
     tabs.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   function renderDocumentState(document, documents) {
-    $('fileName').textContent = document ? document.path + (document.dirty ? ' *' : '') : 'No file open';
-    const tagTitle = $('tagPanelTitle');
+    byId('fileName').textContent = document ? document.path + (document.dirty ? ' *' : '') : 'No file open';
+    const tagTitle = byId('tagPanelTitle');
     tagTitle.textContent = document ? `标签 · ${fileLabel(document.path)}` : '标签';
     tagTitle.title = document?.path || '';
-    $('tagPrevFileBtn').disabled = !document;
-    $('tagNextFileBtn').disabled = !document;
+    byId('tagPrevFileBtn').disabled = !document;
+    byId('tagNextFileBtn').disabled = !document;
     renderTabs(documents, document);
   }
 
@@ -324,7 +324,7 @@
   }
 
   function renderPreview({ path, cssText, html, rawUrl }) {
-    const preview = $('preview');
+    const preview = byId('preview');
     preview.hidden = false;
     const dir = path.split('/').slice(0, -1).join('/');
     const { bg, ink } = themeColors();
@@ -334,21 +334,14 @@
   }
 
   function clearPreview() {
-    $('preview').hidden = true;
-    $('preview').srcdoc = '';
+    byId('preview').hidden = true;
+    byId('preview').srcdoc = '';
   }
 
-  function setDark(monaco, on, onChanged) {
-    document.body.classList.toggle('dark', on);
-    localStorage.setItem('mewDark', on ? '1' : '0');
-    $('darkBtn').textContent = on ? 'Light' : 'Dark';
-    monaco.editor.defineTheme('mew', {
-      base: on ? 'vs-dark' : 'vs', inherit: true,
-      rules: window.MewEditorCore.vscodeHtmlThemeRules(on),
-      colors: window.MewEditorCore.vscodeEditorThemeColors(on)
-    });
-    monaco.editor.setTheme('mew');
-    onChanged();
+  function setTheme(dark) {
+    document.body.classList.toggle('dark', dark);
+    localStorage.setItem('mewDark', dark ? '1' : '0');
+    byId('darkBtn').textContent = dark ? 'Light' : 'Dark';
   }
 
   function toggleFullscreen() {
@@ -363,8 +356,8 @@
   }
 
   function askClose(document) {
-    $('closeMessage').textContent = `${document.path} 有未保存的修改，是否保存？`;
-    const dialog = $('closeDialog');
+    byId('closeMessage').textContent = `${document.path} 有未保存的修改，是否保存？`;
+    const dialog = byId('closeDialog');
     return new Promise(resolve => {
       dialog.addEventListener('close', () => resolve(dialog.returnValue), { once: true });
       dialog.returnValue = 'cancel';
@@ -373,13 +366,13 @@
   }
 
   function askFileName({ mode, directory, initialName = '' }) {
-    const dialog = $('fileDialog');
-    const form = $('fileDialogForm');
-    const input = $('fileNameInput');
-    $('fileDialogTitle').textContent = mode === 'new' ? '新建文件' : '另存为';
-    $('fileDialogSubmit').textContent = mode === 'new' ? '创建' : '保存';
-    $('fileDialogDirectory').textContent = directory || '工作区根目录';
-    $('fileDialogError').textContent = '';
+    const dialog = byId('fileDialog');
+    const form = byId('fileDialogForm');
+    const input = byId('fileNameInput');
+    byId('fileDialogTitle').textContent = mode === 'new' ? '新建文件' : '另存为';
+    byId('fileDialogSubmit').textContent = mode === 'new' ? '创建' : '保存';
+    byId('fileDialogDirectory').textContent = directory || '工作区根目录';
+    byId('fileDialogError').textContent = '';
     input.value = initialName;
     return new Promise(resolve => {
       const finish = value => {
@@ -398,7 +391,7 @@
         else if (name === '.' || name === '..' || /[\\/:*?"<>|\u0000-\u001f]/.test(name)) error = '文件名不能包含路径或 Windows 保留字符。';
         else if (/[. ]$/.test(name)) error = '文件名不能以空格或句点结尾。';
         else if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name)) error = '这是 Windows 保留文件名。';
-        if (error) { $('fileDialogError').textContent = error; input.focus(); return; }
+        if (error) { byId('fileDialogError').textContent = error; input.focus(); return; }
         dialog.close();
         finish(name);
       };
@@ -412,27 +405,27 @@
   }
 
   function bindWorkbench(actions) {
-    $('newFileBtn').onclick = actions.newFile;
-    $('saveBtn').onclick = actions.save;
-    $('saveAsBtn').onclick = actions.saveAs;
-    $('saveAllBtn').onclick = actions.saveAll;
-    $('undoBtn').onclick = actions.undo;
-    $('redoBtn').onclick = actions.redo;
-    $('findBtn').onclick = actions.find;
-    $('prevFileBtn').onclick = () => actions.navigate(-1);
-    $('nextFileBtn').onclick = () => actions.navigate(1);
-    $('newWinBtn').onclick = actions.openWindow;
-    $('closeSavedBtn').onclick = () => actions.closeAll(true);
-    $('closeAllBtn').onclick = () => actions.closeAll(false);
-    $('darkBtn').onclick = actions.toggleDark;
-    $('fullBtn').onclick = toggleFullscreen;
-    $('refreshBtn').onclick = actions.refreshPreview;
-    $('openRawBtn').onclick = actions.openRaw;
-    $('treeRefreshBtn').onclick = tree.refresh;
-    $('treeCollapseBtn').onclick = tree.collapse;
-    $('treeRevealBtn').onclick = () => tree.reveal(actions.activePath()).catch(error => note(error.message));
-    $('treeFilter').oninput = tree.filter;
-    $('tabs').onclick = event => {
+    byId('newFileBtn').onclick = actions.newFile;
+    byId('saveBtn').onclick = actions.save;
+    byId('saveAsBtn').onclick = actions.saveAs;
+    byId('saveAllBtn').onclick = actions.saveAll;
+    byId('undoBtn').onclick = actions.undo;
+    byId('redoBtn').onclick = actions.redo;
+    byId('findBtn').onclick = actions.find;
+    byId('prevFileBtn').onclick = () => actions.navigate(-1);
+    byId('nextFileBtn').onclick = () => actions.navigate(1);
+    byId('newWinBtn').onclick = actions.openWindow;
+    byId('closeSavedBtn').onclick = () => actions.closeAll(true);
+    byId('closeAllBtn').onclick = () => actions.closeAll(false);
+    byId('darkBtn').onclick = actions.toggleDark;
+    byId('fullBtn').onclick = toggleFullscreen;
+    byId('refreshBtn').onclick = actions.refreshPreview;
+    byId('openRawBtn').onclick = actions.openRaw;
+    byId('treeRefreshBtn').onclick = tree.refresh;
+    byId('treeCollapseBtn').onclick = tree.collapse;
+    byId('treeRevealBtn').onclick = () => tree.reveal(actions.activePath()).catch(error => notify(error.message));
+    byId('treeFilter').oninput = tree.filter;
+    byId('tabs').onclick = event => {
       const close = event.target.closest('[data-close]');
       if (close) return actions.closeDocuments([close.dataset.close]);
       const tab = event.target.closest('[data-path]');
@@ -447,11 +440,11 @@
       });
     });
     document.addEventListener('pointerdown', event => closeMenus(event.target.closest('.menu')));
-    if (window.MEWBackend) {
-      $('newFileBtn').hidden = $('saveAsBtn').hidden = true;
-      $('submitChangeBtn').hidden = $('gitConfigBtn').hidden = false;
-      $('submitChangeBtn').onclick = () => window.MEWBackend.submitChanges().catch(error => note(error.message));
-      $('gitConfigBtn').onclick = () => { location.href = '../git-editor.html'; };
+    if (actions.submitChanges) {
+      byId('newFileBtn').hidden = byId('saveAsBtn').hidden = true;
+      byId('submitChangeBtn').hidden = byId('gitConfigBtn').hidden = false;
+      byId('submitChangeBtn').onclick = actions.submitChanges;
+      byId('gitConfigBtn').onclick = actions.configureGit;
     }
   }
 
@@ -512,16 +505,12 @@
   setupHeaderActions();
   setupLayout();
   window.MewEditorUI = {
-    $, note, tree, mountTagPanel, editorScale, renderTabs, renderDocumentState,
-    themeColors, renderPreview, clearPreview, setDark, askClose, askFileName, bindWorkbench,
+    byId, notify, tree, mountTagPanel, editorScale, renderTabs, renderDocumentState,
+    themeColors, renderPreview, clearPreview, setTheme, askClose, askFileName, bindWorkbench,
     isDark() { return document.body.classList.contains('dark'); },
     setReaderLinkedTitle() { document.title = 'MEW Monaco Editor · 阅读器联控'; },
-    languageLabel(monaco, id) {
-      const language = monaco.languages.getLanguages().find(item => item.id === id);
-      return language?.aliases?.[0] || id;
-    },
-    setLanguage(text) { $('languageInfo').textContent = text; },
-    setPosition(line, column) { $('positionInfo').textContent = `Ln ${line}, Col ${column}`; },
-    showMonacoError(error) { $('status').textContent = `Monaco 加载失败：${error.message || error}`; }
+    setLanguage(text) { byId('languageInfo').textContent = text; },
+    setPosition(line, column) { byId('positionInfo').textContent = `Ln ${line}, Col ${column}`; },
+    showMonacoError(error) { byId('status').textContent = `Monaco 加载失败：${error.message || error}`; }
   };
 })();

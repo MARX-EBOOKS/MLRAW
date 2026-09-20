@@ -137,6 +137,32 @@
     "editorHoverWidget.background": "#FAFAFD", "editorHoverWidget.border": "#E4E5E6", "editorGutter.background": "#FFFFFF",
     "editorOverviewRuler.border": "#F0F1F2", "editorOverviewRuler.findMatchForeground": "#0069CC99"
   };
+  // 两个入口共用默认配置；仅在确有页面差异时填写下面的覆盖项。
+  const monacoOptions = {
+    model: null, automaticLayout: true, fontFamily: 'Consolas, "Cascadia Mono", monospace',
+    fontSize: 14, lineHeight: 21, tabSize: 2, wordWrap: "on", minimap: { enabled: false },
+    find: { addExtraSpaceOnTop: false },
+    // Monaco 0.55.1 在快速切换模型时可能取消 occurrence 请求并报错。
+    occurrencesHighlight: "off", scrollBeyondLastLine: false, padding: { top: 14, bottom: 14 },
+    colorDecorators: true, defaultColorDecorators: "never",
+    renderLineHighlight: "gutter", renderLineHighlightOnlyWhenFocus: true
+  };
+  const indexMonacoOptions = {};
+  const readerMonacoOptions = {};
+  const registeredThemes = new WeakSet();
+
+  function setMonacoTheme(api, dark) {
+    if (!registeredThemes.has(api)) {
+      for (const isDark of [false, true]) {
+        api.editor.defineTheme(isDark ? "mew-dark" : "mew-light", {
+          base: isDark ? "vs-dark" : "vs", inherit: true,
+          rules: vscodeHtmlThemeRules(isDark), colors: vscodeEditorThemeColors(isDark)
+        });
+      }
+      registeredThemes.add(api);
+    }
+    api.editor.setTheme(dark ? "mew-dark" : "mew-light");
+  }
 
   function registerHtmlStyleColorProvider(api) {
     if (registeredColorProviders.has(api)) return;
@@ -189,10 +215,16 @@
   }
 
   class MonacoController {
-    constructor(api, host, options = {}) {
+    constructor(api, host, { page = "index", scale = 1, dark = false, ...options } = {}) {
       this.api = api;
       registerHtmlStyleColorProvider(api);
-      this.editor = api.editor.create(host, options);
+      setMonacoTheme(api, dark);
+      const config = { ...monacoOptions, ...(page === "reader" ? readerMonacoOptions : indexMonacoOptions), ...options };
+      this.fontSize = config.fontSize;
+      this.lineHeight = config.lineHeight;
+      this.editor = api.editor.create(host, {
+        ...config, fontSize: this.fontSize * scale, lineHeight: Math.round(this.lineHeight * scale)
+      });
     }
 
     createModel({ text = "", language = "html", uri, onChange } = {}) {
@@ -207,8 +239,8 @@
     focus() { this.editor.focus(); }
     hasTextFocus() { return this.editor.hasTextFocus(); }
     setEditable(editable) { this.editor.updateOptions({ readOnly: !editable }); }
-    setScale(scale, lineHeight = 21) {
-      this.editor.updateOptions({ fontSize: 14 * scale, lineHeight: Math.round(lineHeight * scale) });
+    setScale(scale) {
+      this.editor.updateOptions({ fontSize: this.fontSize * scale, lineHeight: Math.round(this.lineHeight * scale) });
     }
     selection() {
       const selection = this.editor.getSelection(), model = this.model;
@@ -307,5 +339,5 @@
     return new Promise((resolve, reject) => require(["vs/editor/editor.main"], resolve, reject));
   }
 
-  window.MewEditorCore = { DocumentModel, MonacoController, createChannel, languageForPath, loadMonaco, vscodeHtmlThemeRules, vscodeEditorThemeColors };
+  window.MewEditorCore = { DocumentModel, MonacoController, createChannel, languageForPath, loadMonaco, setMonacoTheme };
 })();

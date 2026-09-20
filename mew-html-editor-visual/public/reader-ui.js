@@ -9,12 +9,10 @@
   const body = document.body;
   const grid = document.querySelector(".reader-grid");
   const scanPane = document.querySelector(".scan-pane");
-  const monacoHost = byId("monacoEditor");
   const visualFrame = byId("visualEditor");
   const pdfFrame = byId("pdfFrame");
   const listeners = {};
   let initialized = false;
-  let monacoApi = null, source = null, tagEditor = null;
   let editorScale = 1;
   let statusTimer = null;
   let pendingPdfOptions = null;
@@ -93,6 +91,8 @@
     new ResizeObserver(schedule).observe(header);
     const pdfToolsResize = new ResizeObserver(entries => {
       for (const { target } of entries) {
+        target.classList.remove('compact-navigation');
+        target.classList.toggle('compact-navigation', target.scrollWidth > target.clientWidth);
         pdfFrame.style.setProperty('--pdf-toolbar-height', `${target.getBoundingClientRect().height}px`);
       }
     });
@@ -128,41 +128,13 @@
     localStorage.setItem("readerDark", dark ? "1" : "0");
     const button = byId("darkBtn");
     if (button) button.textContent = dark ? "浅色" : "深色";
-    if (monacoApi) monacoApi.editor.setTheme(dark ? "reader-dark" : "reader-light");
+    emit("theme", dark);
     applyVisualTheme();
-  }
-
-  function initMonaco(api) {
-    if (source) return source.editor;
-    monacoApi = api;
-    const themes = [["reader-light", "vs"], ["reader-dark", "vs-dark"]];
-    for (const [name, base] of themes) {
-      const dark = base === "vs-dark";
-      monacoApi.editor.defineTheme(name, {
-        base, inherit: true, rules: MewEditorCore.vscodeHtmlThemeRules(dark),
-        colors: MewEditorCore.vscodeEditorThemeColors(dark)
-      });
-    }
-    source = new MewEditorCore.MonacoController(monacoApi, monacoHost, {
-      model: null, automaticLayout: true, fontFamily: 'Consolas, "Cascadia Mono", monospace',
-      fontSize: 14 * editorScale, lineHeight: Math.round(22 * editorScale), tabSize: 2, wordWrap: "on", minimap: { enabled: false },
-      find: { addExtraSpaceOnTop: false }, occurrencesHighlight: "off", scrollBeyondLastLine: false,
-      padding: { top: 14, bottom: 14 }, readOnly: true,
-      colorDecorators: true, defaultColorDecorators: "never"
-    });
-    source.setModel(source.createModel({ text: "", language: "html", uri: monacoApi.Uri.parse("mew-reader:///page.html"), onChange: () => emit("sourceInput") }));
-    tagEditor = new window.MewTagPanel.TagEditor(source);
-    source.editor.onDidChangeCursorSelection(() => emit("historyChanged"));
-    source.editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyF, () => toggleSourceFind(false, false));
-    source.editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyH, () => toggleSourceFind(true, false));
-    setTheme(body.classList.contains("dark"));
-    window.readerMonaco = { editor: source.editor, model: source.model };
-    return source.editor;
   }
 
   function setEditorScale(value) {
     editorScale = Math.min(1.6, Math.max(.8, Number(value) || 1));
-    source?.setScale(editorScale, 22);
+    emit("editorScale", editorScale);
     const doc = visualFrame?.contentDocument;
     if (doc?.documentElement) doc.documentElement.style.zoom = editorScale;
     return editorScale;
@@ -678,28 +650,10 @@
   chromeNodes.filter(Boolean).forEach(node => chromeResizeObserver.observe(node));
   syncChromeMetrics();
 
-  async function toggleSourceFind(replace = true, toggleIfVisible = true) {
-    return source?.toggleFind({ replace, toggleIfVisible, readClipboard: true });
-  }
-
   window.ReaderUI = {
     init, notify, setDirty, setHistoryButtons, renderVolumes, renderToc, renderNavigation, renderTools,
-    setMode, setWorkspaceMode, setToc, setPdf, applyVisualTheme, showVisual, initMonaco, setEditorScale,
-    getSource: () => source?.getValue() || "",
-    applySourceTag: tag => tagEditor.applyTag(tag),
-    setSource: (text, preserveUndo = false) => source?.setValue(text, preserveUndo, "reader.visual"),
-    getSourceSelection: () => source?.selection() || { start: 0, end: 0 },
-    setSourceSelection: (start, end = start) => source?.setSelection(start, end),
-    replaceSourceRange: (text, start, end) => source?.replaceRange(text, start, end, start, start, "reader.edit"),
-    focusSource: () => source?.focus(),
-    setSourceScroll: ({ top = 0, left = 0 }) => source?.editor.setScrollPosition({ scrollTop: top, scrollLeft: left }),
-    setSourceEditable: (editable) => source?.setEditable(editable),
-    canUndo: () => source?.canUndo() || false,
-    canRedo: () => source?.canRedo() || false,
-    undoSource: () => source?.undo(),
-    redoSource: () => source?.redo(),
-    toggleFind: toggleSourceFind,
-    hasSourceTextFocus: () => Boolean(source?.hasTextFocus()),
+    setMode, setWorkspaceMode, setToc, setPdf, applyVisualTheme, showVisual, setEditorScale,
+    byId, editorScale: () => editorScale, isDark: () => body.classList.contains("dark"),
     getVisualDocument: () => visualFrame.contentDocument
   };
 
