@@ -395,7 +395,7 @@
     const bindShortcuts = (targetDocument, fixedTarget = null) => {
       const shortcut = event => {
         if (!event.isComposing && event.ctrlKey && event.altKey && !event.metaKey && !event.shiftKey && event.code === "KeyM") {
-          event.preventDefault(); event.stopPropagation(); setVisible(true); return;
+          event.preventDefault(); event.stopPropagation(); setVisible(panel.hidden); return;
         }
         const wheel = event.type === "wheel";
         if (!(event.ctrlKey || event.metaKey) || (!wheel && event.altKey)) return;
@@ -423,8 +423,8 @@
     window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, scale: 1 }); updateScale("editor"); apply(); save(); });
     const toggle = document.getElementById("tagPanelToggle");
     if (toggle) {
-      toggle.title = "打开标签编辑框（Ctrl+Alt+T）";
-      toggle.setAttribute("aria-keyshortcuts", "Control+Alt+T");
+      toggle.title = panel.hidden ? "打开标签编辑框（Ctrl+Alt+M）" : "隐藏标签编辑框（Ctrl+Alt+M）";
+      toggle.setAttribute("aria-keyshortcuts", "Control+Alt+M");
     }
     const setVisible = visible => {
       panel.hidden = !visible;

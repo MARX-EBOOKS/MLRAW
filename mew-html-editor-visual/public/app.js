@@ -5,6 +5,77 @@ const ui = window.MewEditorUI;
 if (!ui) throw new Error('MewEditorUI 未载入');
 const { byId, notify } = ui;
 const state = { path: "", docs: new Map(), cssText: "" };
+const pendingOpens = new Map();
+let loadEpoch = 0;
+let sessionKey = '', backupTimer = 0, backupWarning = false;
+let sessionReady = Promise.resolve();
+let restoringSession = true;
+
+function persistSession() {
+  clearTimeout(backupTimer);
+  if (restoringSession || !sessionKey || !editor) return;
+  saveEditorView();
+  try {
+    sessionStorage.setItem(sessionKey, JSON.stringify({
+      version: 1, active: state.path,
+      documents: [...state.docs.values()].map(d => ({
+        path: d.path, viewState: d.viewState,
+        ...(d.dirty ? { content: d.content, savedContent: d.savedContent, mtime: d.mtime } : {})
+      }))
+    }));
+    backupWarning = false;
+  } catch {
+    if (!backupWarning) notify('页面暂存失败；请先保存文件，刷新可能丢失未保存的修改');
+    backupWarning = true;
+  }
+}
+function scheduleSessionBackup() {
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(persistSession, 200);
+}
+async function restoreSession() {
+  try {
+    const workspace = await api('/api/tree');
+    const config = window.MEWBackend?.config;
+    sessionKey = 'mew.editor.session.v1:' + JSON.stringify([location.pathname, workspace.root,
+      config ? [config.provider, config.apiUrl, config.repository, config.branch, config.root] : null, syncSession]);
+    const saved = JSON.parse(sessionStorage.getItem(sessionKey) || 'null');
+    if (saved?.version !== 1 || !Array.isArray(saved.documents)) return;
+    for (const entry of saved.documents) {
+      if (typeof entry.path !== 'string' || !entry.path || state.docs.has(entry.path)) continue;
+      const options = {
+        read: () => api(`/api/file?path=${encodeURIComponent(entry.path)}`),
+        write: snapshot => postJson('/api/save', { path: entry.path, ...snapshot })
+      };
+      const hasDraft = typeof entry.content === 'string' && typeof entry.savedContent === 'string';
+      let d;
+      try { d = await DocumentModel.load(options); }
+      catch (error) {
+        if (!hasDraft) { notify(`无法恢复 ${entry.path}: ${error.message}`); continue; }
+        d = new DocumentModel({ ...options, text: entry.savedContent, mtime: entry.mtime });
+        notify(`已恢复 ${entry.path} 的暂存内容，但无法读取磁盘文件：${error.message}`);
+      }
+      if (hasDraft && d.content !== entry.content) {
+        if (d.savedContent !== entry.savedContent) {
+          // Keep the original disk version so saving still detects the conflict.
+          d.savedContent = entry.savedContent;
+          d.mtime = entry.mtime;
+          notify(`${entry.path} 在暂存后已被外部修改；已保留暂存内容，保存时将检查冲突`);
+        }
+        d.update(entry.content);
+      }
+      Object.assign(d, { path: entry.path, viewState: entry.viewState });
+      state.docs.set(d.path, d);
+    }
+    const active = state.docs.has(saved.active) ? saved.active : state.docs.keys().next().value;
+    if (active) switchDoc(active);
+  } catch (error) {
+    sessionKey = '';
+    notify(`页面暂存不可用：${error.message}`);
+  } finally {
+    restoringSession = false;
+  }
+}
 const core = window.MewEditorCore;
 if (!core) throw new Error('MewEditorCore 未载入');
 const tagPanel = window.MewTagPanel;
@@ -145,8 +216,14 @@ async function saveAs() {
   try {
     const data = await d.enqueue(() => createFileAt(target, snapshot));
     const oldPath = d.path;
-    const viewState = editor.saveViewState();
+    if (state.docs.get(oldPath) !== d) {
+      ui.tree.scheduleRefresh();
+      return notify(`Saved as ${data.path}`);
+    }
+    const wasActive = doc() === d;
+    const viewState = wasActive ? editor.saveViewState() : d.viewState;
     state.docs.delete(oldPath);
+    clearTimeout(externalCheckTimers.get(oldPath));
     externalCheckTimers.delete(oldPath);
     d.reloadRevision += 1;
     d.path = data.path;
@@ -154,52 +231,58 @@ async function saveAs() {
     d.mtime = data.mtime;
     d.read = () => api(`/api/file?path=${encodeURIComponent(d.path)}`);
     d.write = value => postJson('/api/save', { path: d.path, ...value });
+    if (wasActive) editor.setModel(null);
     d.model?.dispose();
     d.model = null;
     d.viewState = viewState;
     state.docs.set(d.path, d);
-    state.path = d.path;
-    switchDoc(d.path);
+    if (wasActive) {
+      state.path = d.path;
+      switchDoc(d.path);
+    } else renderTabs();
     ui.tree.scheduleRefresh();
     notify(`Saved as ${d.path}${d.dirty ? '; newer edits remain unsaved' : ''}`);
   } catch (error) { notify(error.message); }
 }
 async function openFile(rel) {
+  await sessionReady;
+  if (closing) return;
   const request = ++openRevision;
   if (state.docs.has(rel)) return switchDoc(rel);
+  const epoch = loadEpoch;
   try {
-    const d = await DocumentModel.load({
-      read: async () => {
-        const data = await api(`/api/file?path=${encodeURIComponent(rel)}`);
-        rel = data.path;
-        return data;
-      },
-      write: snapshot => postJson("/api/save", { path: rel, ...snapshot })
-    });
-    // A second open may have completed while this request was in flight.
-    if (!state.docs.has(rel)) state.docs.set(rel, Object.assign(d, {
-      path: rel
-    }));
-    if (request === openRevision) switchDoc(rel);
+    let loading = pendingOpens.get(rel);
+    if (!loading) {
+      let canonicalPath = rel;
+      loading = DocumentModel.load({
+        read: async () => {
+          const data = await api(`/api/file?path=${encodeURIComponent(canonicalPath)}`);
+          canonicalPath = data.path;
+          return data;
+        },
+        write: snapshot => postJson("/api/save", { path: canonicalPath, ...snapshot })
+      }).then(d => Object.assign(d, { path: canonicalPath }));
+      pendingOpens.set(rel, loading);
+      loading.finally(() => {
+        if (pendingOpens.get(rel) === loading) pendingOpens.delete(rel);
+      }).catch(() => {});
+    }
+    const d = await loading;
+    if (epoch !== loadEpoch) return;
+    if (!state.docs.has(d.path)) state.docs.set(d.path, d);
+    if (request === openRevision) switchDoc(d.path);
+    else renderTabs();
   } catch (error) { notify(error.message); }
 }
 async function openSiblingFile(direction) {
   if (!state.path) return notify("Open a file first");
-  const current = doc();
-  if (current?.dirty) {
-    try {
-      await current.saveUntilClean();
-      markDirty();
-    } catch (error) {
-      notify(`自动保存失败：${error.message}`);
-      return;
-    }
-  }
+  const request = ++openRevision;
   const parts = state.path.split("/");
   const currentName = parts.pop();
   const dir = parts.join("/");
   try {
     const data = await api(`/api/tree?path=${encodeURIComponent(dir)}`);
+    if (request !== openRevision || closing) return;
     const files = data.entries.filter(entry => entry.type === "file");
     const currentIndex = files.findIndex(entry => entry.name === currentName);
     if (currentIndex < 0 || files.length < 2) return notify("No other file in this folder");
@@ -334,9 +417,11 @@ function markDirty() {
   const d = doc();
   ui.renderDocumentState(d, state.docs.values());
   announceEditorPage();
+  scheduleSessionBackup();
 }
 function renderTabs() {
   ui.renderTabs(state.docs.values(), doc());
+  scheduleSessionBackup();
 }
 function switchDoc(path) {
   saveEditorView();
@@ -385,6 +470,8 @@ async function closeDocs(paths) {
   if (closing) return;
   closing = true;
   ++openRevision;
+  ++loadEpoch;
+  pendingOpens.clear();
   try {
     for (const path of paths) {
       const d = state.docs.get(path);
@@ -400,6 +487,8 @@ async function closeDocs(paths) {
       if (state.docs.get(path) !== d) continue;
       if (doc() === d) { editor.setModel(null); state.path = ''; }
       state.docs.delete(path);
+      clearTimeout(externalCheckTimers.get(path));
+      externalCheckTimers.delete(path);
       d.model?.dispose();
     }
     if (!doc()) {
@@ -422,7 +511,7 @@ function setTheme(dark) {
   core.setMonacoTheme(monaco, dark);
   refreshPreview();
 }
-function initMonaco(api) {
+async function initMonaco(api) {
   monaco = api;
   source = new MonacoController(monaco, byId('monacoEditor'), {
     scale: ui.editorScale(), dark: localStorage.getItem('mewDark') === '1'
@@ -431,7 +520,9 @@ function initMonaco(api) {
   editor = source.editor;
   editor.onDidChangeCursorPosition(event => {
     ui.setPosition(event.position.lineNumber, event.position.column);
+    scheduleSessionBackup();
   });
+  editor.onDidScrollChange(scheduleSessionBackup);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, save);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, saveAs);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, newFile);
@@ -480,13 +571,20 @@ function initMonaco(api) {
     activateDocument(path) { ++openRevision; switchDoc(path); }
   });
   setTheme(localStorage.getItem('mewDark') === '1');
+  sessionReady = restoreSession();
+  await sessionReady;
   startReaderSync();
   connectFileEvents(); checkCssUpdate();
   const file = new URLSearchParams(location.search).get('file');
   if (file) openFile(file);
   window.addEventListener('beforeunload', event => {
+    persistSession();
     syncChannel?.postMessage({ source: 'editor', type: 'editor-closed', path: state.path });
     if ([...state.docs.values()].some(d => d.dirty)) { event.preventDefault(); event.returnValue = ''; }
+  });
+  window.addEventListener('pagehide', persistSession);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistSession();
   });
   window.mewWorkbench = { editor, documents: state.docs, openFile, newFile, saveAs };
 }

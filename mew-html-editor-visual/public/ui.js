@@ -269,8 +269,8 @@
       '<span class="spacer"></span>',
       ...attrs.map((attr, index) => `<button class="tag attrTag" data-attr="${index}" title="${escapeHtml(attr.title)}">${escapeHtml(attr.label)}</button>`),
       '<span class="spacer"></span>',
-      '<button id="tagPrevFileBtn" class="tag attrTag tagFileNav" data-nav="-1" title="上一文件；切换前自动保存">←</button>',
-      '<button id="tagNextFileBtn" class="tag attrTag tagFileNav" data-nav="1" title="下一文件；切换前自动保存">→</button>'
+      '<button id="tagPrevFileBtn" class="tag attrTag tagFileNav" data-nav="-1" title="上一文件；保留未保存的修改">←</button>',
+      '<button id="tagNextFileBtn" class="tag attrTag tagFileNav" data-nav="1" title="下一文件；保留未保存的修改">→</button>'
     ].join('');
     byId('tagBar').onclick = event => {
       const tag = event.target.closest('button[data-i]');

@@ -120,6 +120,7 @@ main:has(.editorPane .workbench-hover-container),
   overflow: visible;
 }
 .editorPane:has(.workbench-hover-container) { z-index: 20; }
+.editorWrap:has(.workbench-hover-container) { z-index: 21; overflow: visible; }
 #positionInfo { margin-left: auto; color: var(--muted); font-size: 12px; }
 #tree [role="treeitem"]:focus { outline: 1px solid var(--tag); }
 

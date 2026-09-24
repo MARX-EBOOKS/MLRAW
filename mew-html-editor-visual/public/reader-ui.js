@@ -18,6 +18,7 @@
   let pendingPdfOptions = null;
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
   let pdfUrl = "", pdfPageLabels = null, scrollMode = null, pdfWriteTimer = null, pdfRevision = 0;
+  let pdfReady = false;
   let pdfShortcutActive = false;
   let pdfContextPageNumber = null;
   const PDF_SETTINGS_KEY = "readerPdfSettings.v1";
@@ -232,7 +233,7 @@
     byId("chapterTitle").textContent = view.chapterTitle;
     byId("pageContext").textContent = view.pageContext;
     byId("pagePosition").textContent = view.pageTotal;
-    if (document.activeElement !== byId("pageInput")) byId("pageInput").value = view.page;
+    if (document.activeElement !== byId("pageInput")) byId("pageInput").value = view.pdfPage ?? view.page;
     byId("volumeSelect").value = view.volume;
     for (const [id, enabled] of pageButtons) {
       if (byId(id)) byId(id).disabled = !view[enabled];
@@ -378,7 +379,16 @@
     const current = pdfViewer?.currentPageNumber || matches?.[0];
     return matches?.reduce((best, page) => Math.abs(page - current) < Math.abs(best - current) ? page : best, matches[0]) || null;
   }
-  function showPendingPdfPage() { const page = pdfPageNumberForLabel(pendingPdfOptions?.pageLabel); if (page) pdfViewer.currentPageNumber = page; }
+  function reportPdfPage() {
+    if (!pdfReady || !pdfViewer.pdfDocument) return;
+    const pageNumber = pdfViewer.currentPageNumber;
+    emit("pdfPageChange", { pageNumber, pageLabel: pdfPageLabels?.[pageNumber - 1] ?? String(pageNumber), url: pdfUrl });
+  }
+  function showPendingPdfPage() {
+    const page = pdfPageNumberForLabel(pendingPdfOptions?.pageLabel);
+    if (page && page !== pdfViewer.currentPageNumber) pdfViewer.currentPageNumber = page;
+    else reportPdfPage();
+  }
 
   function imageObject(page, id) {
     if (typeof id !== "string") return null;
@@ -473,8 +483,16 @@
         imageResourcesPath: "/vendor/pdfjs/web/images/", imagesRightClickMinSize: 1
       });
       pdfLinkService.setViewer(pdfViewer); scrollMode = viewerModule.ScrollMode;
-      eventBus.on("pagesinit", () => { pdfViewer.setPageLabels(pdfPageLabels); pdfViewer.currentScaleValue = pdfSettings.scale; applyPdfSettings(); showPendingPdfPage(); setPdfStatus(); });
-      eventBus.on("pagechanging", ({ pageNumber, pageLabel }) => { if (pageNumber != null) emit("pdfPageChange", { pageNumber, pageLabel }); });
+      eventBus.on("pagesinit", () => {
+        pdfViewer.setPageLabels(pdfPageLabels);
+        pdfViewer.currentScaleValue = pdfSettings.scale;
+        applyPdfSettings();
+        showPendingPdfPage();
+        pdfReady = true;
+        reportPdfPage();
+        setPdfStatus();
+      });
+      eventBus.on("pagechanging", reportPdfPage);
       eventBus.on("scalechanging", ({ scale, presetValue }) => { pdfSettings.scale = presetValue || String(scale); frameId("zoomValue").value = `${Math.round(scale * 100)}%`; savePdfSettings(); });
       return pdfjs;
     })().catch((error) => { pdfRuntimePromise = null; throw error; });
@@ -483,9 +501,11 @@
   async function setPdf(options) {
     pendingPdfOptions = options;
     const pdfjs = await ensurePdfRuntime();
+    if (options !== pendingPdfOptions) return;
     const url = options.url || "";
     if (url === pdfUrl && (pdfViewer.pdfDocument || pdfLoadingTask)) return showPendingPdfPage();
     const revision = ++pdfRevision;
+    pdfReady = false;
     pdfUrl = url; setPdfStatus(url ? "正在载入 PDF…" : "此卷未配置 PDF");
     pdfViewer.setDocument(null); pdfLinkService.setDocument(null); pdfPageLabels = null;
     const oldTask = pdfLoadingTask; pdfLoadingTask = null; await oldTask?.destroy();
