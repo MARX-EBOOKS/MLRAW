@@ -241,6 +241,10 @@
     },
     "keybindings": [
       {
+        "command": "mewReader.showBar",
+        "key": "ctrl+alt+m"
+      },
+      {
         "command": "mewReader.openPreviousPage",
         "key": "alt+pageup",
         "when": "editorTextFocus"
@@ -296,6 +300,11 @@
         "when": "editorTextFocus"
       },
       {
+        "command": "mewReader.insert.u",
+        "key": "alt+u",
+        "when": "editorTextFocus"
+      },
+      {
         "command": "mewReader.insert.h1",
         "key": "alt+1",
         "when": "editorTextFocus"
@@ -331,11 +340,6 @@
         "when": "editorTextFocus"
       },
       {
-        "command": "mewReader.insert.BR",
-        "key": "alt+enter",
-        "when": "editorTextFocus"
-      },
-      {
         "command": "mewReader.insert.div",
         "key": "alt+d",
         "when": "editorTextFocus"
@@ -343,6 +347,21 @@
       {
         "command": "mewReader.insert.span",
         "key": "alt+s",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.noIndentAttr",
+        "key": "alt+0",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.BR",
+        "key": "alt+enter",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "mewReader.insert.hrs",
+        "key": "alt+h",
         "when": "editorTextFocus"
       }
     ],

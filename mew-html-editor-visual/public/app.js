@@ -533,7 +533,7 @@ async function initMonaco(api) {
     const key = event.key.toLowerCase();
     const findVisible = editor.getDomNode()?.querySelector('.find-widget')?.classList.contains('visible');
     if (event.altKey && findVisible && ['c', 'w', 'r', 'p'].includes(key)) return;
-    const tag = tagMap.get(key);
+    const tag = tagPanel.tagForKeyEvent(event);
     const br = event.altKey && event.key === 'Enter';
     const suppressClosedFindOption = event.altKey && key === 'w';
     if (tag || br || suppressClosedFindOption) {
@@ -568,6 +568,16 @@ async function initMonaco(api) {
     openRaw,
     activePath: () => state.path,
     closeDocuments: closeDocs,
+    moveTab(path, targetPath, after) {
+      if (!state.docs.has(path) || path === targetPath || (targetPath && !state.docs.has(targetPath))) return;
+      const entries = [...state.docs].filter(([key]) => key !== path);
+      const index = targetPath ? entries.findIndex(([key]) => key === targetPath) + (after ? 1 : 0) : entries.length;
+      entries.splice(index, 0, [path, state.docs.get(path)]);
+      state.docs.clear();
+      for (const [key, document] of entries) state.docs.set(key, document);
+      renderTabs();
+      persistSession();
+    },
     activateDocument(path) { ++openRevision; switchDoc(path); }
   });
   setTheme(localStorage.getItem('mewDark') === '1');

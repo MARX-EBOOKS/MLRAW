@@ -152,7 +152,7 @@ const tags = [
   { id: "f", label: "FN", shortcut: "f", open: "<sup><a href=\"\" id=\"\">", close: "</a></sup>", title: "Alt+F / f" },
   { id: "r", label: "R", shortcut: "r", open: "<p align=\"right\">", close: "</p>", title: "Alt+R / r" },
   { id: "c", label: "C", shortcut: "c", open: "<p align=\"center\">", close: "</p>", title: "Alt+C / c" },
-  { id: "ltgt", label: "&lt;&gt;", shortcut: "&lt;&gt;", open: "&lt;", close: "&gt;", title: "Insert angle bracket" },
+  { id: "ltgt", label: "&lt;&gt;", open: "&lt;", close: "&gt;", title: "Insert angle bracket" },
   ...Array.from({ length: 6 }, (_, index) => {
     const shortcut = String(index + 1), id = `h${shortcut}`;
     return { id, label: id.toUpperCase(), shortcut, open: `<${id}>`, close: `</${id}>`, title: `Alt+${shortcut} / ${shortcut}` };
@@ -163,16 +163,16 @@ const tags = [
   { id: "aside", label: "ASIDE", shortcut: "aside", open: "<aside>", close: "</aside>", title: "Aside" },
   { id: "sup", label: "SUP", shortcut: "sup", open: "<sup>", close: "</sup>", title: "Insert Superscript" },
   { id: "sub", label: "SUB", shortcut: "sub", open: "<sub>", close: "</sub>", title: "Insert Subscript" },
-  { id: "u", label: "U", open: "<u>", close: "</u>", title: "Insert Underline" }
+  { id: "u", label: "U", open: "<u>", shortcut: "u", close: "</u>", title: "Insert Underline" }
 ];
 const attrs = [
   { id: "idAttr", label: "ID=", text: " id=\"\"", cursorOffset: 5, title: "Insert id attribute" },
   { id: "classAttr", label: "CLASS=", text: " class=\"\"", cursorOffset: 8, title: "Insert class attribute" },
   { id: "styleAttr", label: "STYLE=", text: " style=\"\"", cursorOffset: 8, title: "Insert style attribute" },
-  { id: "hrs", label: "HRS", text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
-  { id: "noIndentAttr", label: "NO INDENT", text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" },
+  { id: "hrs", label: "HRS", shortcut: 'h', text: "<hr style=\"width: 20%;\">", cursorOffset: 22, title: "Insert short hardline" },
+  { id: "noIndentAttr", label: "NO INDENT", shortcut: '0', text: " style=\"text-indent: 0;\"", cursorOffset: 23, title: "Insert no-indent style attribute" },
   { id: "HR", label: "HR", text: "<hr>", cursorOffset: 3, title: "Insert hardline" },
-  { id: "BR", label: "BR", text: "<br>", cursorOffset: 3, title: "Insert change line" },
+  { id: "BR", label: "BR", shortcut: 'enter', text: "<br>", cursorOffset: 3, title: "Insert change line" },
   { id: "SUPdSUB", label: "SUP/SUB", text: "<sup></sup>/<sub></sub>", cursorOffset: 5, title: "Insert division" }
 ];
 const nav = [

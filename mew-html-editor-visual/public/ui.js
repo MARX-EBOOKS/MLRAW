@@ -304,7 +304,7 @@
 
   function renderTabs(documents, active) {
     const tabs = byId('tabs');
-    tabs.innerHTML = [...documents].map(document => `<button class="tab${document === active ? ' active' : ''}" data-path="${escapeHtml(document.path)}" title="${escapeHtml(document.path)}"><span class="tabName">${escapeHtml(fileLabel(document.path))}${document.dirty ? ' *' : ''}</span><span class="tabClose" data-close="${escapeHtml(document.path)}" title="Close">×</span></button>`).join('');
+    tabs.innerHTML = [...documents].map(document => `<button draggable="true" class="tab${document === active ? ' active' : ''}" data-path="${escapeHtml(document.path)}" title="${escapeHtml(document.path)}"><span class="tabName">${escapeHtml(fileLabel(document.path))}${document.dirty ? ' *' : ''}</span><span class="tabClose" data-close="${escapeHtml(document.path)}" title="Close">×</span></button>`).join('');
     tabs.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
@@ -425,7 +425,49 @@
     byId('treeCollapseBtn').onclick = tree.collapse;
     byId('treeRevealBtn').onclick = () => tree.reveal(actions.activePath()).catch(error => notify(error.message));
     byId('treeFilter').oninput = tree.filter;
-    byId('tabs').onclick = event => {
+    const tabs = byId('tabs');
+    let draggedPath = null, dropMarker = null;
+    const clearDropMarker = () => {
+      if (dropMarker) dropMarker.style.boxShadow = '';
+      dropMarker = null;
+    };
+    tabs.ondragstart = event => {
+      const tab = event.target.closest('.tab');
+      if (!tab || event.target.closest('[data-close]')) { event.preventDefault(); return; }
+      draggedPath = tab.dataset.path;
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', draggedPath);
+    };
+    tabs.ondragover = event => {
+      if (draggedPath === null) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      clearDropMarker();
+      const tab = event.target.closest('.tab');
+      if (tab && tab.dataset.path !== draggedPath) {
+        const rect = tab.getBoundingClientRect();
+        dropMarker = tab;
+        tab.style.boxShadow = `inset ${event.clientX < rect.left + rect.width / 2 ? 2 : -2}px 0 var(--ink)`;
+      }
+      const rect = tabs.getBoundingClientRect();
+      if (event.clientX < rect.left + 28) tabs.scrollLeft -= 20;
+      else if (event.clientX > rect.right - 28) tabs.scrollLeft += 20;
+    };
+    tabs.ondragleave = event => {
+      if (!tabs.contains(event.relatedTarget)) clearDropMarker();
+    };
+    tabs.ondrop = event => {
+      if (draggedPath === null) return;
+      event.preventDefault();
+      const tab = event.target.closest('.tab');
+      const rect = tab?.getBoundingClientRect();
+      const path = draggedPath;
+      draggedPath = null;
+      clearDropMarker();
+      actions.moveTab(path, tab?.dataset.path, rect ? event.clientX >= rect.left + rect.width / 2 : true);
+    };
+    tabs.ondragend = () => { draggedPath = null; clearDropMarker(); };
+    tabs.onclick = event => {
       const close = event.target.closest('[data-close]');
       if (close) return actions.closeDocuments([close.dataset.close]);
       const tab = event.target.closest('[data-path]');

@@ -645,7 +645,7 @@
     const direction = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
     const editableTarget = event.target.matches?.("textarea,[contenteditable]") || event.target.isContentEditable || event.target.closest?.(".monaco-editor");
     if (event.altKey && !command) {
-      const tag = tagMap.get(key);
+      const tag = tagPanel.tagForKeyEvent(event);
       if (direction || tag) event.preventDefault();
       if (direction) adjacent(direction);
       else if (tag) editTag(tag);
