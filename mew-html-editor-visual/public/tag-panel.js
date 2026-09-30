@@ -143,7 +143,7 @@
         const inOpening = start === end && start < wrapper.openEnd;
         if (inlineInsert) {
           open = text.slice(start, wrapper.openEnd) + tag.open;
-          close = tag.open + text.slice(wrapper.closeStart, byStart.get(start).end);
+          close = tag.close + text.slice(wrapper.closeStart, byStart.get(start).end);
         }
         return { start: wrapper.start, end: wrapper.end, text: open + inner + close,
           selectStart: open.length + (exact || inOpening ? 0 : start - wrapper.openEnd),
