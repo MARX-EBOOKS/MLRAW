@@ -472,6 +472,8 @@ async function closeDocs(paths) {
   ++openRevision;
   ++loadEpoch;
   pendingOpens.clear();
+  const order = [...state.docs.keys()];
+  const activePath = state.path;
   try {
     for (const path of paths) {
       const d = state.docs.get(path);
@@ -492,7 +494,11 @@ async function closeDocs(paths) {
       d.model?.dispose();
     }
     if (!doc()) {
-      const next = state.docs.keys().next().value;
+      const i = order.indexOf(activePath);
+      let next = null;
+      for (let k = i - 1; k >= 0 && !next; k--) if (state.docs.has(order[k])) next = order[k];
+      for (let k = i + 1; k < order.length && !next; k++) if (state.docs.has(order[k])) next = order[k];
+      if (!next) next = state.docs.keys().next().value; 
       if (next) switchDoc(next);
       else {
         editor.setModel(null);
