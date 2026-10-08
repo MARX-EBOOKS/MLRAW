@@ -225,6 +225,16 @@
       this.editor = api.editor.create(host, {
         ...config, fontSize: this.fontSize * scale, lineHeight: Math.round(this.lineHeight * scale)
       });
+      // 菜单执行前恢复焦点；粘贴复用已有剪贴板读取方式及 Monaco 的 paste 处理。
+      const menu = this.editor.getContribution("editor.contrib.contextmenu");
+      const getActions = menu._getMenuActions.bind(menu);
+      menu._getMenuActions = (...args) => getActions(...args).map(action => {
+        if (!/^editor\.action\.clipboard(Copy|Cut|Paste)Action$/.test(action.id)) return action;
+        const run = action.run.bind(action);
+        action.run = (...params) => { this.focus(); const model = this.model; return action.id.endsWith("PasteAction")
+          ? navigator.clipboard.readText().then(text => { if (text && this.model === model && !this.editor.getOption(api.editor.EditorOption.readOnly)) this.editor.trigger("mew", "paste", { text }); }) : run(...params); };
+        return action;
+      });
     }
 
     createModel({ text = "", language = "html", uri, onChange } = {}) {
