@@ -15,7 +15,6 @@
     <details id="fileMenu" class="menu">
       <summary>File</summary>
       <div class="menuPanel">
-      <button id="newFileBtn" title="Create a file beside the active file (Ctrl+N)">新建文件…</button>
       <button id="saveBtn" title="Save current file">Save</button>
       <button id="saveAsBtn" title="Save the current content beside the active file (Ctrl+Shift+S)">另存为…</button>
       <button id="saveAllBtn" title="Save all open files (Ctrl+K S)">Save all</button>
@@ -46,11 +45,14 @@
   </header>
   <main>
     <aside id="explorerPane" aria-label="文件资源管理器">
-      <strong class="paneTitle">文件资源管理器</strong>
-      <div class="treeActions">
-        <button id="treeRefreshBtn" title="Refresh file tree">刷新</button>
-        <button id="treeCollapseBtn" title="Collapse folders">折叠</button>
-        <button id="treeRevealBtn" title="Reveal active file">定位</button>
+      <div class="explorerHeader">
+        <strong class="paneTitle">文件资源管理器</strong>
+        <div class="treeActions" role="toolbar" aria-label="文件树操作">
+          <button id="newFileBtn" type="button" title="新建文件…（Ctrl+N）" aria-label="新建文件"><span class="explorerIcon iconNewFile" aria-hidden="true"></span></button>
+          <button id="treeRefreshBtn" type="button" title="刷新文件树" aria-label="刷新文件树"><span class="explorerIcon iconRefresh" aria-hidden="true"></span></button>
+          <button id="treeCollapseBtn" type="button" title="折叠所有目录" aria-label="折叠所有目录"><span class="explorerIcon iconCollapse" aria-hidden="true"></span></button>
+          <button id="treeRevealBtn" type="button" title="定位当前文件" aria-label="定位当前文件"><span class="explorerIcon iconReveal" aria-hidden="true"></span></button>
+        </div>
       </div>
       <input id="treeFilter" placeholder="筛选文件…" aria-label="筛选文件">
       <div id="rootPath"></div>

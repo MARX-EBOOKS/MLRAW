@@ -190,11 +190,10 @@ async function createFileAt(path, text) {
     return postJson('/api/create', { path, text, overwrite: true, mtime: error.mtime });
   }
 }
-async function newFile() {
-  const directory = currentDirectory();
+async function newFile(directory = currentDirectory()) {
   const name = await ui.askFileName({ mode: 'new', directory });
   if (!name) return;
-  const path = joinCurrentDirectory(name);
+  const path = [directory, name].filter(Boolean).join('/');
   if (state.docs.has(path)) return notify(`${path} 已经打开`);
   try {
     await createFileAt(path, '');
@@ -531,7 +530,7 @@ async function initMonaco(api) {
   editor.onDidScrollChange(scheduleSessionBackup);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, save);
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS, saveAs);
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, newFile);
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyN, () => newFile());
   // Capture tag shortcuts and keep closed-find option keys from revealing Monaco's standalone widget.
   byId('monacoEditor').addEventListener('keydown', event => {
     if (event.isComposing || event.ctrlKey || event.metaKey || !editor.hasTextFocus()) return;

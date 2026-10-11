@@ -43,3 +43,12 @@ dialog footer{gap:8px;background:var(--vscode-sideBar-background)}
 dialog footer button:first-child{margin-right:auto}
 
 @media(max-width:640px){#title{display:none}.tool-group:first-of-type{margin-right:auto}}
+
+#tocButton[hidden],#tocPanel[hidden]{display:none}
+#tocPanel{position:absolute;z-index:7;inset:34px auto 0 0;width:min(340px,90vw);overflow:auto;background:var(--vscode-sideBar-background,var(--vscode-editor-background));border-right:1px solid var(--vscode-panel-border);box-shadow:4px 0 12px #0004}
+#tocPanel header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;position:sticky;top:0;background:inherit}
+#tocPanel ol{list-style:none;margin:0;padding:0 10px 0 16px}
+#tocPanel a{display:block;padding:6px 0;color:var(--vscode-textLink-foreground);text-decoration:none;overflow-wrap:anywhere}
+#tocPanel a:hover,#tocPanel a:focus{background:var(--vscode-list-hoverBackground);text-decoration:underline}
+
+#tocPanel a.active{background:var(--vscode-list-activeSelectionBackground);color:var(--vscode-list-activeSelectionForeground);font-weight:600}

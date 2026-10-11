@@ -19,6 +19,7 @@
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
   let pdfUrl = "", pdfPageLabels = null, scrollMode = null, pdfWriteTimer = null, pdfRevision = 0;
   let pdfReady = false;
+  let configuredToc = { title: "", items: [] }, pdfToc = [];
   let pdfShortcutActive = false;
   let pdfContextPageNumber = null;
   const PDF_SETTINGS_KEY = "readerPdfSettings.v1";
@@ -214,19 +215,73 @@
     select.value = selected || "";
   }
 
-  function renderToc(title, items) {
-    byId("tocTitle").textContent = `${title}目录`;
-    const list = byId("tocList");
-    list.replaceChildren(...items.map((item) => {
+  function renderToc(title, items = []) {
+    configuredToc = { title, items };
+    pdfToc = [];
+    drawToc();
+  }
+
+  function drawToc() {
+    const items = pdfToc.length ? pdfToc : configuredToc.items;
+    byId("tocTitle").textContent = `${configuredToc.title}目录`;
+    byId("tocList").replaceChildren(...items.map((item, index) => {
       const li = element("li");
       li.style.setProperty("--level", item.level);
       const link = element("a", "", "", { href: "#" });
-      link.dataset.page = item.page;
-      link.append(element("span", "", item.page), item.title);
+      if (pdfToc.length) link.dataset.pdfToc = index;
+      else link.dataset.page = item.page;
+      link.append(element("span", "", item.page ?? ""), item.title);
       li.append(link);
       return li;
     }));
     byId("tocBtn").hidden = !items.length;
+    if (!items.length) setToc(false);
+    updatePdfTocNavigation();
+  }
+
+  function updatePdfTocNavigation() {
+    if (!pdfToc.length) return;
+    const page = pdfViewer?.currentPageNumber;
+    const chapter = pdfToc.reduce((best, item) => item.pageNumber != null && item.pageNumber <= page &&
+      (!best || item.pageNumber >= best.pageNumber) ? item : best, null);
+    byId("chapterTitle").textContent = chapter?.title || configuredToc.title;
+    document.querySelectorAll("#tocList [data-pdf-toc]").forEach(link => {
+      const active = pdfToc[Number(link.dataset.pdfToc)] === chapter;
+      link.classList.toggle("active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
+    });
+  }
+
+  async function loadPdfToc(document, revision) {
+    try {
+      const outline = await document.getOutline();
+      const items = [];
+      async function visit(nodes, level = 1) {
+        for (const node of nodes || []) {
+          let destination = null, pageNumber = null;
+          try {
+            destination = typeof node.dest === "string" ? await document.getDestination(node.dest) : node.dest;
+            if (Array.isArray(destination)) {
+              const ref = destination[0];
+              pageNumber = typeof ref === "number" ? ref + 1 : await document.getPageIndex(ref) + 1;
+              if (pageNumber < 1 || pageNumber > document.numPages) pageNumber = null;
+            }
+          } catch { /* Keep headings and their children even if a destination is broken. */ }
+          items.push({ title: node.title, level, destination: pageNumber ? destination : null,
+            pageNumber, page: pageNumber ? pdfPageLabels?.[pageNumber - 1] ?? pageNumber : "" });
+          await visit(node.items, level + 1);
+        }
+      }
+      await visit(outline);
+      if (revision !== pdfRevision) return;
+      pdfToc = items;
+      drawToc();
+    } catch {
+      if (revision !== pdfRevision) return;
+      pdfToc = [];
+      drawToc();
+    }
   }
 
   function renderNavigation(view) {
@@ -245,7 +300,8 @@
     if (panelTitle) panelTitle.textContent = pageTitle;
     if (panelHeader) panelHeader.title = `${pageTitle}：按住标题栏拖动可自由浮动，拖到窗口上/下边缘可停靠，双击恢复默认`;
     byId("saveBtn").disabled = !view.editable;
-    document.querySelectorAll("#tocList a").forEach((link) =>
+    updatePdfTocNavigation();
+    document.querySelectorAll("#tocList a[data-page]").forEach((link) =>
       link.classList.toggle("active", Number(link.dataset.page) === view.chapterPage));
   }
 
@@ -492,6 +548,7 @@
         reportPdfPage();
         setPdfStatus();
       });
+      eventBus.on("pagechanging", updatePdfTocNavigation);
       eventBus.on("pagechanging", reportPdfPage);
       eventBus.on("scalechanging", ({ scale, presetValue }) => { pdfSettings.scale = presetValue || String(scale); frameId("zoomValue").value = `${Math.round(scale * 100)}%`; savePdfSettings(); });
       return pdfjs;
@@ -506,6 +563,7 @@
     if (url === pdfUrl && (pdfViewer.pdfDocument || pdfLoadingTask)) return showPendingPdfPage();
     const revision = ++pdfRevision;
     pdfReady = false;
+    pdfToc = []; drawToc();
     pdfUrl = url; setPdfStatus(url ? "正在载入 PDF…" : "此卷未配置 PDF");
     pdfViewer.setDocument(null); pdfLinkService.setDocument(null); pdfPageLabels = null;
     const oldTask = pdfLoadingTask; pdfLoadingTask = null; await oldTask?.destroy();
@@ -518,6 +576,7 @@
       pdfPageLabels = await document.getPageLabels() || Array.from({ length: document.numPages }, (_, index) => String(index + 1));
       if (revision !== pdfRevision) return document.destroy();
       pdfViewer.setDocument(document); pdfLinkService.setDocument(document);
+      void loadPdfToc(document, revision);
     } catch (error) {
       if (revision !== pdfRevision) return;
       pdfLoadingTask = null; setPdfStatus(`PDF 载入失败：${error.message}`); notify(`PDF 载入失败：${error.message}`, true);
@@ -577,12 +636,19 @@
     for (const [id, direction] of [["prevBtn", -1], ["nextPageBtn", 1]]) bind(id, "click", () => emit("adjacent", direction));
     bind("tocBtn", "click", () => setToc(!root.classList.contains("toc-open")));
     for (const id of ["tocClose", "tocBackdrop"]) bind(id, "click", () => setToc(false));
-    bind("tocList", "click", (event) => {
-      const link = event.target.closest("[data-page]");
+    bind("tocList", "click", async (event) => {
+      const link = event.target.closest("[data-page], [data-pdf-toc]");
       if (!link) return;
       event.preventDefault();
-      setToc(false);
-      emit("page", Number(link.dataset.page));
+      if ("pdfToc" in link.dataset) {
+        const item = pdfToc[Number(link.dataset.pdfToc)], revision = pdfRevision;
+        if (!item?.destination || await emit("beforePdfToc") === false || revision !== pdfRevision) return;
+        setToc(false);
+        await pdfLinkService.goToDestination(item.destination);
+      } else {
+        setToc(false);
+        emit("page", Number(link.dataset.page));
+      }
     });
     bind("darkBtn", "click", () => setTheme(!body.classList.contains("dark")));
     bind("tagBar", "click", (event) => {

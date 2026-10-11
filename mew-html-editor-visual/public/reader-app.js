@@ -664,6 +664,10 @@
       mode: () => setMode(), save, undo, redo, volume: changeVolume,
       splitView: enterSplitView, combinedView: restoreCombinedView,
       page: (page) => navigate(state.volume, page), adjacent,
+      beforePdfToc: async () => {
+        updateWorkingCopy();
+        return !state.document.dirty || await save();
+      },
       tag: (index) => editTag(tags[index]),
       attr: (index) => {
         if (state.mode === "visual") return notify("属性按钮请在源代码模式使用");

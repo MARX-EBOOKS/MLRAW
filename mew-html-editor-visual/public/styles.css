@@ -18,12 +18,34 @@ main { height: calc(100% - 44px); display: grid; grid-template-columns: minmax(1
 aside, .editorPane, .previewPane { min-width: 0; min-height: 0; border-right: 1px solid var(--line); }
 aside { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: var(--soft); }
 #rootPath, #status, #findInfo, #fileName { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#tree { overflow: auto; font-size: 13px; }
+#tree { overflow: auto; font-size: 13px; scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 35%, transparent) transparent; }
+#tree::-webkit-scrollbar { width: 8px; height: 8px; }
+#tree::-webkit-scrollbar-track, #tree::-webkit-scrollbar-corner { background: transparent; }
+#tree::-webkit-scrollbar-thumb { border-radius: 0; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+#tree:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 50%, transparent); }
+#tree::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--muted) 65%, transparent); }
+#tree::-webkit-scrollbar-thumb:active { background: color-mix(in srgb, var(--muted) 80%, transparent); }
+#tree::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+@supports selector(::-webkit-scrollbar) {
+  #tree { scrollbar-width: auto; scrollbar-color: auto; }
+}
 .item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 5px; cursor: pointer; user-select: none; }
 .item:hover, .item.active { background: var(--hover); }
 .item[hidden] { display: none; }
 .item:focus-visible { outline: 1px solid var(--tag); }
-.treeActions { display: flex; gap: 4px; }
+.explorerHeader { display: flex; flex: none; align-items: center; flex-wrap: wrap; gap: 4px; min-height: 28px; }
+.explorerHeader .paneTitle { flex: 1 1 80px; min-width: 0; white-space: nowrap; letter-spacing: 0; }
+.treeActions { display: flex; flex: none; align-items: center; gap: 2px; margin-left: auto; }
+.treeActions button { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 24px; height: 24px; min-height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: var(--ink); }
+.treeActions button[hidden] { display: none; }
+.treeActions button:hover { background: var(--hover); }
+@font-face { font-family: "Explorer Codicons"; src: url("/monaco/esm/vs/base/browser/ui/codicons/codicon/codicon.ttf") format("truetype"); font-display: block; }
+.explorerIcon { font: 16px/1 "Explorer Codicons"; }
+.iconNewFile::before { content: "\ea7f"; }
+.iconRefresh::before { content: "\eb37"; }
+.iconCollapse::before { content: "\eac5"; }
+.iconReveal::before { content: "\ea94"; }
+#tree .item.selected { background: var(--sel); }
 dialog { max-width: min(560px, 90vw); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: var(--panel); }
 dialog p { overflow-wrap: anywhere; }
 dialog::backdrop { background: #0006; }
@@ -75,7 +97,6 @@ html.preview-pane-closed main { --preview-track: 0px; --preview-splitter-track: 
 aside, .editorPane, .previewPane { border-right: 0; }
 aside { gap: 10px; padding: 12px 10px; }
 .paneTitle { font-size: 12px; color: var(--muted); letter-spacing: .04em; }
-.treeActions { flex-wrap: wrap; }
 #tree { flex: 1; min-height: 0; }
 .item { min-height: 28px; border-radius: 3px; }
 .paneSplitter { background: var(--soft); border-inline: 1px solid var(--line); cursor: col-resize; touch-action: none; position: relative; }

@@ -194,6 +194,82 @@ async function copyCurrentImage() {
   }
 }
 
+function setTocOpen(open) {
+  document.querySelector("#tocPanel").hidden = !open;
+  document.querySelector("#tocButton").setAttribute("aria-expanded", String(open));
+}
+
+let tocEntries = [];
+
+function updateTocHighlight() {
+  const page = viewer?.currentPageNumber;
+  const current = tocEntries.reduce((best, item) => item.pageNumber != null && item.pageNumber <= page &&
+    (!best || item.pageNumber >= best.pageNumber) ? item : best, null);
+  for (const item of tocEntries) {
+    const active = item === current;
+    item.link.classList.toggle("active", active);
+    if (active) item.link.setAttribute("aria-current", "location");
+    else item.link.removeAttribute("aria-current");
+  }
+}
+
+function clearToc() {
+  tocEntries = [];
+  setTocOpen(false);
+  document.querySelector("#tocButton").hidden = true;
+  document.querySelector("#tocList").replaceChildren();
+}
+
+async function loadToc(pdf, revision) {
+  try {
+    const outline = await pdf.getOutline();
+    if (revision !== documentRevision) return;
+    const list = document.querySelector("#tocList");
+    const entries = [];
+    async function build(nodes) {
+      const result = [];
+      for (const item of nodes || []) {
+        const li = document.createElement("li");
+        const link = document.createElement("a");
+        link.textContent = item.title;
+        link.href = "#";
+        let destination = null, pageNumber = null;
+        try {
+          destination = typeof item.dest === "string" ? await pdf.getDestination(item.dest) : item.dest;
+          if (Array.isArray(destination)) {
+            const ref = destination[0];
+            pageNumber = typeof ref === "number" ? ref + 1 : await pdf.getPageIndex(ref) + 1;
+            if (pageNumber < 1 || pageNumber > pdf.numPages) pageNumber = null;
+          }
+        } catch { /* A broken bookmark must not hide the rest of the outline. */ }
+        entries.push({ link, pageNumber });
+        link.onclick = async event => {
+          event.preventDefault();
+          if (revision !== documentRevision || !pageNumber) return;
+          setTocOpen(false);
+          await linkService.goToDestination(destination);
+        };
+        li.append(link);
+        if (item.items?.length) {
+          const children = document.createElement("ol");
+          children.append(...await build(item.items));
+          li.append(children);
+        }
+        result.push(li);
+      }
+      return result;
+    }
+    const nodes = await build(outline);
+    if (revision !== documentRevision) return;
+    list.replaceChildren(...nodes);
+    tocEntries = entries;
+    updateTocHighlight();
+    document.querySelector("#tocButton").hidden = !list.childElementCount;
+  } catch {
+    if (revision === documentRevision) clearToc();
+  }
+}
+
 async function loadPdf(message) {
   const preservePosition = message.url === currentUrl &&
     Boolean(message.htmlUri) && message.htmlUri === pending?.htmlUri;
@@ -212,6 +288,7 @@ async function loadPdf(message) {
     return;
   }
   const revision = ++documentRevision;
+  clearToc();
   initializing = true;
   sourceController?.abort();
   const controller = sourceController = new AbortController();
@@ -251,6 +328,7 @@ async function loadPdf(message) {
       viewer.setPageLabels(labels);
     });
     viewer.setDocument(document); linkService.setDocument(document);
+    void loadToc(document, revision);
   } catch (error) {
     fail(error);
   }
@@ -292,6 +370,7 @@ async function init() {
   });
   eventBus.on("pagechanging", ({ pageNumber: number, pageLabel }) => {
     showPage(number);
+    updateTocHighlight();
     if (!syncing && !initializing) {
       if (pending) pending = { ...pending, pageLabel: pageLabel || String(number) };
       persistState();
@@ -300,6 +379,9 @@ async function init() {
   });
   eventBus.on("scalechanging", ({ scale, presetValue }) => { saveState({ scale: presetValue || String(scale) }); zoom.value = `${scalePercent(scale)}%`; });
 
+  document.querySelector("#tocButton").onclick = () => setTocOpen(document.querySelector("#tocPanel").hidden);
+  document.querySelector("#tocClose").onclick = () => setTocOpen(false);
+  document.addEventListener("keydown", event => { if (event.key === "Escape") setTocOpen(false); });
   document.querySelector("#minus").onclick = () => viewer.decreaseScale();
   document.querySelector("#copyImage").onclick = copyCurrentImage;
   document.querySelector("#plus").onclick = () => viewer.increaseScale();

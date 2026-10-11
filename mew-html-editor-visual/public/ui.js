@@ -128,8 +128,30 @@
     let renderedText = '';
     let refreshTimer = 0;
     let retryDelay = 1000;
+    let selectedPath = null;
+    let selectedType = null;
 
-    function configure(nextOptions) { options = nextOptions; }
+    function configure(nextOptions) {
+      options = nextOptions;
+      byId('tree').addEventListener('click', event => {
+        if (!event.target.closest('.item')) select('', 'dir');
+      });
+    }
+
+    function select(path, type) {
+      selectedPath = path;
+      selectedType = type;
+      document.querySelectorAll('#tree .item').forEach(row => {
+        const selected = row.dataset.path === path;
+        row.classList.toggle('selected', selected);
+        row.setAttribute('aria-selected', String(selected));
+      });
+    }
+
+    function creationDirectory() {
+      if (selectedPath === null) return options.activePath().split('/').slice(0, -1).join('/');
+      return selectedType === 'dir' ? selectedPath : selectedPath.split('/').slice(0, -1).join('/');
+    }
 
     async function load(rel = '', host = byId('tree'), open = new Set()) {
       const data = await options.read(rel);
@@ -146,7 +168,10 @@
         row.innerHTML = `<span>${entry.type === 'dir' ? '+' : '-'}</span><span class="name">${escapeHtml(entry.name)}</span>`;
         row.tabIndex = 0;
         row.setAttribute('role', 'treeitem');
+        row.classList.toggle('selected', entry.path === selectedPath);
+        row.setAttribute('aria-selected', String(entry.path === selectedPath));
         if (entry.type === 'dir') row.setAttribute('aria-expanded', String(open.has(entry.path)));
+        row.onfocus = () => select(entry.path, entry.type);
         row.onkeydown = event => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
@@ -155,6 +180,7 @@
         };
         row.onclick = event => {
           event.stopPropagation();
+          select(entry.path, entry.type);
           if (entry.type === 'dir') return toggle(row, entry.path).catch(error => notify(error.message));
           options.open(entry.path);
         };
@@ -231,9 +257,9 @@
     }
 
     function setActive(path = '') {
+      select(path, 'file');
       document.querySelectorAll('#tree .item').forEach(row => {
         row.classList.toggle('active', row.dataset.path === path);
-        row.setAttribute('aria-selected', String(row.dataset.path === path));
       });
     }
 
@@ -260,7 +286,7 @@
       document.querySelector('#tree .active')?.scrollIntoView({ block: 'nearest' });
     }
 
-    return { configure, refresh, scheduleRefresh, filter, setActive, collapse, reveal };
+    return { configure, refresh, scheduleRefresh, filter, setActive, collapse, reveal, creationDirectory };
   })();
 
   function mountTagPanel({ tags, attrs, storageKey, onTag, onAttr, onNavigate, onEditorScale }) {
@@ -405,7 +431,7 @@
   }
 
   function bindWorkbench(actions) {
-    byId('newFileBtn').onclick = actions.newFile;
+    byId('newFileBtn').onclick = () => actions.newFile(tree.creationDirectory());
     byId('saveBtn').onclick = actions.save;
     byId('saveAsBtn').onclick = actions.saveAs;
     byId('saveAllBtn').onclick = actions.saveAll;
