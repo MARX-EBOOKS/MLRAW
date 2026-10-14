@@ -40,6 +40,10 @@
     const actions = header.querySelector('.actions');
     const menu = header.querySelector('.topActions');
     const panel = menu.querySelector('.menuPanel');
+    function positionMenu() {
+      if (menu.open) panel.style.right = `${Math.min(0, menu.getBoundingClientRect().right - panel.offsetWidth - 4)}px`;
+    }
+    menu.addEventListener('toggle', positionMenu);
     const navigation = element('div', 'reader-navigation');
     navigation.append(byId('volumeSelect'), actions.querySelector('.action-group-page'));
     navigation.hidden = true;
@@ -75,6 +79,7 @@
           if (fits()) break;
           panel.prepend(node);
         }
+        positionMenu();
         if (focus instanceof HTMLElement && focus !== document.activeElement) {
           (panel.contains(focus) && !menu.open ? menu.querySelector('summary') : focus).focus({ preventScroll: true });
         }
@@ -350,6 +355,9 @@
 
   const frameId = (id) => pdfFrame?.querySelector(`#${id}`);
   function normalizedPdfSettings(value = {}) {
+    // Diff highlighting is saved independently; PDF controls must not overwrite it.
+    const { diffHighlight, ...displaySettings } = value;
+    value = displaySettings;
     const color = (input, fallback) => /^#[0-9a-f]{6}$/i.test(String(input)) ? String(input).toLowerCase() : fallback;
     const scale = typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : PDF_DEFAULTS.scale;
     return { ...PDF_DEFAULTS, ...value, brightness: Math.max(50, Math.min(160, Number(value.brightness) || 100)), paper: color(value.paper, PDF_DEFAULTS.paper), ink: color(value.ink, PDF_DEFAULTS.ink), invert: Boolean(value.invert), horizontal: Boolean(value.horizontal), scale };
