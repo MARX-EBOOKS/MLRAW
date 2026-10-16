@@ -30,19 +30,14 @@
         };
         const offsetA = offsets(left), offsetB = offsets(right), parts = [];
         let a = 0, b = 0;
-        const append = (html, pdf, changed) => {
+        const append = (html, pdf, changed, refine = true) => {
           if (!html && !pdf) return;
-          if (changed && monacoOnly) {
-            // Monaco may extend a character change to word boundaries.
-            let prefix = 0, suffix = 0;
-            while (prefix < Math.min(html.length, pdf.length) && html[prefix] === pdf[prefix]) prefix++;
-            if (prefix && /[\uD800-\uDBFF]/.test(html[prefix - 1])) prefix--;
-            while (suffix < Math.min(html.length, pdf.length) - prefix && html.at(-suffix - 1) === pdf.at(-suffix - 1)) suffix++;
-            if (suffix && /[\uDC00-\uDFFF]/.test(html[html.length - suffix])) suffix--;
-            if (prefix || suffix) {
-              append(html.slice(0, prefix), pdf.slice(0, prefix), false);
-              append(html.slice(prefix, html.length - suffix), pdf.slice(prefix, pdf.length - suffix), true);
-              append(html.slice(html.length - suffix), pdf.slice(pdf.length - suffix), false);
+          if (changed && monacoOnly && refine) {
+            // Monaco's line/word heuristics can absorb matching text between edits.
+            // Refine those runs once; decorations and click mapping share these parts.
+            const precise = localTextDiff(html, pdf, true, 128);
+            if (precise.distance <= 128) {
+              for (const part of precise.parts) append(part.html, part.pdf, part.changed, false);
               return;
             }
           }
@@ -51,6 +46,7 @@
           if (last?.changed === changed) { last.html += html; last.pdf += pdf; }
           else parts.push({ html, pdf, changed });
         };
+        const ranges = [];
         for (const change of result.changes) {
           if (!change.innerChanges?.length) throw new Error("Missing Monaco character ranges");
           for (const { originalRange: x, modifiedRange: y } of change.innerChanges) {
@@ -58,10 +54,20 @@
             const startB = offsetB(y.startLineNumber, y.startColumn), endB = offsetB(y.endLineNumber, y.endColumn);
             if (![startA, endA, startB, endB].every(Number.isInteger) || startA < a || startB < b
               || endA < startA || endB < startB || endA > left.length || endB > right.length) throw new Error("Invalid Monaco ranges");
-            append(left.slice(a, startA), right.slice(b, startB), false);
-            append(left.slice(startA, endA), right.slice(startB, endB), true);
+            const previous = ranges.at(-1), gapA = left.slice(a, startA), gapB = right.slice(b, startB);
+            // Blank lines can split a moved-looking deletion/insertion of matching text.
+            // Refine both sides together so whitespace cannot strand a whole heading.
+            if (monacoOnly && previous && gapA === gapB && /^\s*$/.test(gapA)) {
+              previous.endA = endA; previous.endB = endB;
+            } else ranges.push({ startA, endA, startB, endB });
             a = endA; b = endB;
           }
+        }
+        a = 0; b = 0;
+        for (const { startA, endA, startB, endB } of ranges) {
+          append(left.slice(a, startA), right.slice(b, startB), false);
+          append(left.slice(startA, endA), right.slice(startB, endB), true);
+          a = endA; b = endB;
         }
         append(left.slice(a), right.slice(b), false);
         if (monacoOnly) return { parts };
@@ -90,10 +96,11 @@
           let at = cursor;
           do {
             const start = index.starts[at] ?? index.ends[at - 1] ?? 0;
+            if (at < end && index.source?.[start] === '<') { at++; continue; }
             let stop = start;
             if (at < end) {
               stop = index.ends[at++];
-              while (at < end && index.starts[at] <= stop) stop = index.ends[at++];
+              while (at < end && index.starts[at] <= stop && index.source?.[index.starts[at]] !== '<') stop = index.ends[at++];
             }
             if (index.source?.slice(start, stop).startsWith('<')) continue;
             const key = `${start}:${stop}`;

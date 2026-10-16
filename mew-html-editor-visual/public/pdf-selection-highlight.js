@@ -182,7 +182,8 @@
         const position = event?.position || range.getStartPosition(), collection = editorMarks.get(editor)?.collection;
         if (event?.position || range.isEmpty?.()) for (let i = 0; i < (collection?.length || 0); i++) {
           const mark = collection.getRange(i);
-          if (mark?.containsPosition(position) || event?.lineMark && mark?.startLineNumber === position.lineNumber) {
+          // Monaco's gutter range covers the clicked wrapped row, not the whole source line.
+          if (event?.lineRange ? mark?.intersectRanges(event.lineRange) : mark?.containsPosition(position)) {
             marked = true; return mark;
           }
         }
@@ -204,7 +205,8 @@
       if (subscription) cleanup.push(() => subscription.dispose());
     }
     const click = editor.onMouseDown?.(event => {
-      if (event.target?.position) read({ position: event.target.position, lineMark: event.target.type === 4 });
+      if (event.target?.position) read({ position: event.target.position,
+        lineRange: event.target.type === 4 ? event.target.range : null });
     });
     if (click) cleanup.push(() => click.dispose());
     if (viewer) queueWarm();

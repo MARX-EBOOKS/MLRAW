@@ -82,7 +82,8 @@ function readerSettings(value = {}) {
     ink: color(value.ink, "#000000"),
     invert: Boolean(value.invert),
     horizontal: Boolean(value.horizontal),
-    scale: typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : "page-width"
+    scale: typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : "page-width",
+    diffHighlight: value.diffHighlight !== false
   };
 }
 
@@ -409,7 +410,8 @@ async function api(req, res, url) {
   if (url.pathname === "/api/reader/settings") {
     if (req.method === "GET") return reply(res, 200, await loadReaderSettings());
     if (req.method === "PUT") {
-      const settings = readerSettings(await jsonBody(req));
+      const patch = await jsonBody(req);
+      const settings = readerSettings({ ...await loadReaderSettings(), ...patch });
       await fs.writeFile(SETTINGS_FILE, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
       return reply(res, 200, settings);
     }
