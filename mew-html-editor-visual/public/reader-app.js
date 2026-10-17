@@ -30,7 +30,7 @@
     navigationRevision: 0,
     pendingPdfNavigation: null
   };
-  let currentPdfPage = null;
+  let currentPdfPage = null, reviewPdfReady = Promise.resolve();
   let directoryRefreshTimer;
   let directoryRefreshRevision = 0;
   let syncChannel = null;
@@ -108,7 +108,11 @@
     });
     source.setModel(source.createModel({ text: "", language: "html", uri: monaco.Uri.parse("mew-reader:///page.html"), onChange: () => updateWorkingCopy(source.getValue()) }));
     tagEditor = new tagPanel.TagEditor(source);
-    source.editor.onDidChangeCursorSelection(updateHistoryButtons);
+    source.editor.onDidChangeCursorSelection(({ selection }) => {
+      ui.setPosition(selection.positionLineNumber, selection.positionColumn);
+      updateHistoryButtons();
+    });
+    ui.setPosition(1, 1);
     source.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => toggleFind(false, false));
     source.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyH, () => toggleFind(true, false));
     const findOptionCommands = new Map([
@@ -122,7 +126,15 @@
         else if (tagMap.has(shortcut)) editTag(tagMap.get(shortcut));
       });
     }
-    window.readerMonaco = { editor: source.editor, model: source.model };
+    window.readerMonaco = { editor: source.editor, model: source.model, save, showSource: () => setMode('source'),
+      reviewFiles() {
+        const pages = currentVolume()?.pages || [], volume = state.volume;
+        return { current: state.page, files: [...pages], async open(page) {
+          const opened = await navigate(volume, page);
+          await reviewPdfReady;
+          return opened && state.volume === volume && state.page === page;
+        } };
+      } };
     return source.editor;
   }
 
@@ -263,6 +275,7 @@
     const index = volume.pages.indexOf(state.page);
     const chapter = (volume.toc || []).findLast(item => item.page <= state.page);
     ui.renderNavigation({
+      filePath: editorPathCache.get(`${state.volume}:${state.page}`) || "",
       chapterTitle: chapter?.title || volume.title,
       chapterPage: chapter?.page,
       pageContext: `${volume.shortTitle} · 第 ${state.page} 页`,
@@ -282,7 +295,7 @@
     // still be in flight; otherwise a late dirty-state announcement can jump back.
     ++locateRevision;
     if (!pdfOrigin) state.pendingPdfNavigation = null;
-    if (state.workspaceMode !== "reader" && !force && state.document.dirty && !(await save())) return false;
+    if (state.workspaceMode !== "reader" && !force && !(await core.saveBeforeNavigation(() => state.document.dirty, save))) return false;
     const volume = state.config.volumes.find((item) => item.id === String(targetVolume));
     if (!volume) return false;
     const requestedPage = Number(targetPage);
@@ -327,7 +340,7 @@
       // 左侧网页发起导航时才定位 PDF；UI 会在重复标签中选择离当前物理页最近的一项。
       if (!pdfOrigin) {
         currentPdfPage = { volume: volume.id, pageLabel: String(requestedPage) };
-        ui.setPdf({ url: volume.pdfUrl, pageLabel: String(requestedPage) })
+        reviewPdfReady = ui.setPdf({ url: volume.pdfUrl, pageLabel: String(requestedPage) })
           .catch((error) => notify(`PDF 载入失败：${error.message}`, true));
       }
       if (page !== requestedPage) notify(`第 ${requestedPage} 页暂无网页文件，已${readerOnly ? "定位" : "显示"}上一可用页 ${page}`);

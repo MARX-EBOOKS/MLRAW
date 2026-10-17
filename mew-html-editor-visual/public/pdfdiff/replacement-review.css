@@ -1,0 +1,25 @@
+.replacement-review{position:fixed;z-index:1500;box-sizing:border-box;overflow:auto;padding:10px;border:1px solid #a87827;border-radius:6px;background:#fff8e7;color:#302510;box-shadow:0 4px 20px #0004;font:13px/1.5 sans-serif;color-scheme:light}
+.replacement-review[hidden],.replacement-review [hidden]{display:none!important}
+.replacement-review[data-content-widget]{position:absolute}
+.replacement-review [data-comparison]{white-space:pre-wrap;overflow-wrap:anywhere;max-height:25vh;overflow:auto}
+.replacement-review mark{background:#ffa62855;color:inherit;font-weight:bold}
+body.dark .replacement-review{background:#25221c;color:#e1d7c4;border-color:#97713c;color-scheme:dark}
+.review-heading,.review-controls,.review-options,.review-feature{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.review-heading [data-title]{flex:1}.review-heading [data-close]{margin-left:auto}
+.replacement-review p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.replacement-review button{font:inherit;color:inherit;background:transparent;border:1px solid #a8782780;border-radius:4px;padding:3px 7px;cursor:pointer}
+.replacement-review button:disabled{opacity:.45;cursor:default}.replacement-review button:hover:not(:disabled){background:#d58b2433}
+.review-options label{display:flex;align-items:center;gap:4px}.review-controls{margin:6px 0}
+.replacement-review summary{cursor:pointer}.replacement-review [data-preview]{height:230px;min-height:100px;width:100%}
+#replacementMenu{position:relative}#replacementMenu>.menuPanel{min-width:220px;max-width:min(380px,90vw)}
+.review-feature{flex-wrap:nowrap}.review-feature>button{flex:1;text-align:left}.review-feature>label{display:flex;align-items:center}
+.topActions #replacementMenu>.menuPanel{position:static;box-shadow:none;min-width:0;max-height:none}
+body>header #replacementFeatures .review-feature>button{border:0;background:transparent;box-shadow:none;text-align:left}
+body>header #replacementFeatures .review-feature>button:hover{background:var(--line)}
+.replacement-review.compact{padding:6px 8px;font-size:12px}
+.replacement-review.compact [data-title],.replacement-review.compact [data-options]{display:none}
+.replacement-review.compact .review-heading{gap:6px;justify-content:flex-end}
+.replacement-review.compact [data-position]{margin-right:auto}
+.replacement-review.compact [data-comparison]{max-height:135px;font:12px/1.45 sans-serif}
+.replacement-review.compact .review-controls{margin:5px 0 0;gap:5px}
+.replacement-review.compact button{padding:2px 6px}

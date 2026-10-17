@@ -6,12 +6,8 @@
   }[char]));
   const fileLabel = path => path.split('/').pop() || path || 'Untitled';
 
-  function notify(message) {
-    byId('status').textContent = message;
-    setTimeout(() => {
-      if (byId('status').textContent === message) byId('status').textContent = '';
-    }, 2500);
-  }
+  const footer = window.MewEditorCore.footer;
+  const notify = (message, persistent) => footer.notify(message, persistent);
 
   function setupLayout() {
     const key = 'mew-editor-layout-v1';
@@ -295,8 +291,8 @@
       '<span class="spacer"></span>',
       ...attrs.map((attr, index) => `<button class="tag attrTag" data-attr="${index}" title="${escapeHtml(attr.title)}">${escapeHtml(attr.label)}</button>`),
       '<span class="spacer"></span>',
-      '<button id="tagPrevFileBtn" class="tag attrTag tagFileNav" data-nav="-1" title="上一文件；保留未保存的修改">←</button>',
-      '<button id="tagNextFileBtn" class="tag attrTag tagFileNav" data-nav="1" title="下一文件；保留未保存的修改">→</button>'
+      '<button id="tagPrevFileBtn" class="tag attrTag tagFileNav" data-nav="-1" title="上一文件 · 自动保存">←</button>',
+      '<button id="tagNextFileBtn" class="tag attrTag tagFileNav" data-nav="1" title="下一文件 · 自动保存">→</button>'
     ].join('');
     byId('tagBar').onclick = event => {
       const tag = event.target.closest('button[data-i]');
@@ -335,7 +331,7 @@
   }
 
   function renderDocumentState(document, documents) {
-    byId('fileName').textContent = document ? document.path + (document.dirty ? ' *' : '') : 'No file open';
+    footer.setAvailable(Boolean(document), Boolean(document));
     const tagTitle = byId('tagPanelTitle');
     tagTitle.textContent = document ? `标签 · ${fileLabel(document.path)}` : '标签';
     tagTitle.title = document?.path || '';
@@ -438,8 +434,7 @@
     byId('undoBtn').onclick = actions.undo;
     byId('redoBtn').onclick = actions.redo;
     byId('findBtn').onclick = actions.find;
-    byId('prevFileBtn').onclick = () => actions.navigate(-1);
-    byId('nextFileBtn').onclick = () => actions.navigate(1);
+    footer.setNavigation(actions.navigate);
     byId('newWinBtn').onclick = actions.openWindow;
     byId('closeSavedBtn').onclick = () => actions.closeAll(true);
     byId('closeAllBtn').onclick = () => actions.closeAll(false);
@@ -524,7 +519,7 @@
     const panel = menu.querySelector('.menuPanel');
     const windowActions = [...panel.children];
     const optionalActions = [...header.children].filter(node =>
-      (node.matches('button') && node.id !== 'findBtn') || node.matches('label'));
+      (node.matches('button') && node.id !== 'findBtn') || node.matches('label') || node.id === 'replacementMenu');
     const slots = optionalActions.map(node => {
       const slot = document.createComment('header action');
       node.before(slot);
@@ -577,8 +572,8 @@
     themeColors, renderPreview, clearPreview, setTheme, askClose, askFileName, bindWorkbench,
     isDark() { return document.body.classList.contains('dark'); },
     setReaderLinkedTitle() { document.title = 'MEW Monaco Editor · 阅读器联控'; },
-    setLanguage(text) { byId('languageInfo').textContent = text; },
-    setPosition(line, column) { byId('positionInfo').textContent = `Ln ${line}, Col ${column}`; },
-    showMonacoError(error) { byId('status').textContent = `Monaco 加载失败：${error.message || error}`; }
+    setLanguage(text) { footer.setLanguage(text); },
+    setPosition(line, column) { footer.setPosition(line, column); },
+    showMonacoError(error) { notify(`Monaco 加载失败：${error.message || error}`, true); }
   };
 })();

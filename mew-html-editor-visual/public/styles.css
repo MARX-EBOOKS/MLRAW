@@ -114,9 +114,6 @@ body.resizing iframe { pointer-events: none; }
 .previewPane > .bar { min-height: 38px; padding: 6px 10px; }
 .previewPane > .bar strong { margin-right: auto; font-size: 12px; }
 iframe { min-height: 0; }
-.statusbar { min-height: 28px; flex: none; display: flex; align-items: center; gap: 12px; padding: 3px 10px; border-top: 1px solid var(--line); background: var(--panel); color: var(--muted); font-size: 12px; }
-.statusbar #status { flex: 1; }
-.statusbar button { min-height: 22px; padding: 1px 7px; font-size: 12px; }
 @media (max-width: 700px) {
   header { gap: 6px; }
   header .topActions { margin-left: 0; }
@@ -284,7 +281,6 @@ body > header .menuPanel button { width: 100%; }
 .tab { min-height: 0; padding: 3px 10px; background: var(--soft); }
 .tab.active { background: var(--bg); }
 .previewPane > .bar { min-height: 30px; padding: 2px 8px; background: var(--soft); }
-.statusbar { min-height: 24px; padding-block: 1px; background: var(--chrome); }
 .scan-pane, .scan-pane #pdfFrame, .scan-pane:fullscreen,
 #pdfFrame #stage { background: var(--scan-bg); }
 #tocList a:hover, #tocList a.active { background: var(--sel); color: var(--ink); }

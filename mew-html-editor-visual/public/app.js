@@ -274,6 +274,7 @@ async function openFile(rel) {
   } catch (error) { notify(error.message); }
 }
 async function openSiblingFile(direction) {
+  if (!(await core.saveBeforeNavigation(() => Boolean(doc()?.dirty), save))) return;
   if (!state.path) return notify("Open a file first");
   const request = ++openRevision;
   const parts = state.path.split("/");
@@ -292,6 +293,13 @@ async function openSiblingFile(direction) {
   }
 }
 
+async function reviewFiles() {
+  const current = state.path, dir = current.split('/').slice(0, -1).join('/');
+  const data = await api(`/api/tree?path=${encodeURIComponent(dir)}`);
+  return { current, files: data.entries.filter(entry => entry.type === 'file' && /\.html?$/i.test(entry.name)).map(entry => entry.path),
+    async open(path) { await openFile(path); return state.path === path; } };
+}
+
 function openFileWindow() {
   if (!state.path) return notify("Open a file first");
   const url = new URL(location.href);
@@ -308,8 +316,10 @@ async function save() {
     if (d.path === state.path) markDirty(true);
     else renderTabs();
     notify(`Saved ${data.path}${d.dirty ? "; newer edits remain unsaved" : ""}`);
+    return !d.dirty;
   } catch (e) {
     notify(e.message);
+    return false;
   }
 }
 async function saveAll() {
@@ -399,9 +409,14 @@ function modelFor(d) {
       language: languageForPath(monaco, d.path),
       uri: monaco.Uri.from({ scheme: 'mew', path: '/' + d.path }),
       onChange: model => {
+        const wasDirty = d.dirty;
         d.update(d.textFromEditor(model.getValue()));
-        if (d === doc()) { markDirty(true); scheduleEditorRefresh(); }
-        else renderTabs();
+        if (d === doc()) {
+          if (wasDirty !== d.dirty) markDirty();
+          else scheduleSessionBackup();
+          scheduleEditorRefresh();
+        } else if (wasDirty !== d.dirty) renderTabs();
+        else scheduleSessionBackup();
       }
     });
   }
@@ -601,7 +616,7 @@ async function initMonaco(api) {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') persistSession();
   });
-  window.mewWorkbench = { editor, documents: state.docs, openFile, newFile, saveAs };
+  window.mewWorkbench = { editor, documents: state.docs, openFile, newFile, save, saveAs, reviewFiles };
 }
 // The explorer does not depend on Monaco. Load it immediately so an editor
 // loader failure or delay cannot leave the file tree blank.

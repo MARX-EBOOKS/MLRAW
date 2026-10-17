@@ -343,11 +343,58 @@
     };
   }
 
+  async function saveBeforeNavigation(isDirty, save) {
+    while (isDirty()) {
+      if (await save() === false) return false;
+    }
+    return true;
+  }
+
+  function mountFooter() {
+    const host = document.querySelector('footer.statusbar');
+    if (!host) return null;
+    const extra = [...host.children];
+    host.innerHTML = `${host.hasAttribute('data-file-info') ? '<span id="fileInfo"></span>' : ''}<output id="status" role="status" aria-live="polite" aria-atomic="true"></output><span id="positionInfo"></span><span id="languageInfo">${host.dataset.language || '纯文本'} · UTF-8</span><button id="prevFileBtn" type="button" title="上一文件 · 自动保存" aria-label="上一文件">←</button><button id="nextFileBtn" type="button" title="下一文件 · 自动保存" aria-label="下一文件">→</button>`;
+    const status = host.querySelector('#status');
+    extra.forEach(node => host.insertBefore(node, node.id === 'layoutReset' ? host.querySelector('#prevFileBtn') : status));
+    const style = document.createElement('style');
+    style.textContent = `
+      .statusbar { flex:none; min-width:0; overflow:hidden; min-height:24px; display:flex; align-items:center; gap:10px; padding:1px 10px; border-top:1px solid var(--line); background:var(--chrome,var(--panel)); color:var(--muted); font-size:12px; }
+      .statusbar button { flex:none; min-height:22px; padding:1px 5px; font-size:12px; }
+      .statusbar #fileInfo,.statusbar .context { flex:0 1 auto; max-width:25%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .statusbar #status { flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .statusbar #positionInfo,.statusbar #languageInfo { flex:0 1 auto; min-width:0; margin-left:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .statusbar .context strong,.statusbar .context small { font-size:11px; font-weight:400; }
+    `;
+    document.head.append(style);
+    let timer, navigate;
+    for (const [id, direction] of [['prevFileBtn',-1],['nextFileBtn',1]]) {
+      host.querySelector('#'+id).onclick = () => navigate?.(direction);
+    }
+    return {
+      host,
+      setNavigation(handler) { navigate = handler; },
+      setAvailable(previous, next) {
+        host.querySelector('#prevFileBtn').disabled = !previous;
+        host.querySelector('#nextFileBtn').disabled = !next;
+      },
+      notify(message, persistent = false) {
+        clearTimeout(timer);
+        status.textContent = status.title = message || '';
+        if (message && !persistent) timer = setTimeout(() => { status.textContent = status.title = ''; }, 2600);
+      },
+      setPosition(line, column) { host.querySelector('#positionInfo').textContent = `Ln ${line}, Col ${column}`; },
+      setLanguage(text) { host.querySelector('#languageInfo').textContent = text; },
+      setFile(path) { const file = host.querySelector('#fileInfo'); if (file) file.textContent = file.title = path || ''; }
+    };
+  }
+  const footer = typeof document !== 'undefined' ? mountFooter() : null;
+
   function loadMonaco(path = "/monaco/min/vs") {
     if (typeof require !== "function") return Promise.reject(new Error("Monaco 加载器未载入"));
     require.config({ paths: { vs: path } });
     return new Promise((resolve, reject) => require(["vs/editor/editor.main"], resolve, reject));
   }
 
-  window.MewEditorCore = { DocumentModel, MonacoController, createChannel, languageForPath, loadMonaco, setMonacoTheme };
+  window.MewEditorCore = { DocumentModel, MonacoController, createChannel, languageForPath, loadMonaco, setMonacoTheme, footer, saveBeforeNavigation };
 })();

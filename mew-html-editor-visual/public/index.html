@@ -6,12 +6,12 @@
   <title>MEW Monaco Editor</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><text y=%2224%22 font-size=%2224%22>✎</text></svg>">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="pdfdiff/replacement-review.css">
 <link rel="manifest" href="titlebar-test-editor.json">
 </head>
 <body>
   <header>
     <strong>MEW Monaco Editor</strong>
-    <span id="fileName">No file open</span>
     <details id="fileMenu" class="menu">
       <summary>File</summary>
       <div class="menuPanel">
@@ -27,11 +27,10 @@
       </div>
     </details>
     <button id="findBtn" title="查找 / 替换（Ctrl+F / Ctrl+H）">查找 / 替换</button>
+    <details id="replacementMenu" class="menu"><summary>审阅 / 批量替换</summary><div id="replacementFeatures" class="menuPanel"></div></details>
     <button id="tagPanelToggle" type="button" aria-controls="tagPanel" aria-expanded="true">隐藏标签编辑框</button>
     <button id="darkBtn" title="Toggle dark mode">Dark</button>
     <label title="When on, single keys insert tags instead of typing letters"><input id="instant" type="checkbox"> instant keys</label>
-    <button id="prevFileBtn" title="切换到文件夹中的上一个文件">← 上一文件</button>
-    <button id="nextFileBtn" title="切换到文件夹中的下一个文件">下一文件 →</button>
     <div class="inlineActions" hidden></div>
     <details class="topActions menu">
       <summary title="窗口操作">更多…</summary>
@@ -74,7 +73,7 @@
       <iframe id="preview" sandbox="allow-scripts" hidden></iframe>
     </section>
   </main>
-  <footer class="statusbar"><span id="status" role="status"></span><span id="positionInfo"></span><span id="languageInfo">纯文本 · UTF-8</span><button id="layoutReset" type="button" title="恢复面板宽度和按钮尺寸">重置布局</button></footer>
+  <footer class="statusbar"><button id="layoutReset" type="button" title="恢复面板宽度和按钮尺寸">重置布局</button></footer>
   <dialog id="closeDialog" aria-labelledby="closeMessage">
     <form method="dialog">
       <p id="closeMessage"></p>
@@ -101,6 +100,8 @@
   <script src="/monaco/min/vs/loader.js"></script>
   <script src="editor-core.js"></script>
   <script src="tag-panel.js"></script>
+  <script src="pdfdiff/pdf-selection-diff.js"></script>
+  <script src="pdfdiff/pdf-review-provider.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
   <script src="titlebar-test.js"></script>

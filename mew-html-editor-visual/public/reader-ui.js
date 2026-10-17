@@ -14,7 +14,7 @@
   const listeners = {};
   let initialized = false;
   let editorScale = 1;
-  let statusTimer = null;
+  const footer = window.MewEditorCore.footer;
   let pendingPdfOptions = null;
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
   let pdfUrl = "", pdfPageLabels = null, scrollMode = null, pdfWriteTimer = null, pdfRevision = 0;
@@ -172,6 +172,7 @@
   function setWorkspaceMode(mode, editorAvailable = true) {
     const readerOnly = mode === "reader";
     body.classList.toggle("reader-only", readerOnly);
+    document.querySelector(readerOnly ? ".scan-pane" : ".text-pane").append(document.querySelector(".statusbar"));
     document.title = readerOnly ? "MEW 对照阅读器" : "MEW 对照阅读编辑器";
     document.querySelector(".brand-name").textContent = document.title;
     document.querySelector(".action-group-edit").hidden = readerOnly;
@@ -191,11 +192,7 @@
     });
   }
 
-  function notify(message, persistent = false) {
-    byId("status").textContent = message || "";
-    clearTimeout(statusTimer);
-    if (message && !persistent) statusTimer = setTimeout(() => { byId("status").textContent = ""; }, 2600);
-  }
+  const notify = (message, persistent) => footer.notify(message, persistent);
 
   const pageButtons = [
     ["prevBtn", "hasPrevious", "Alt+←", " & 保存"], ["nextPageBtn", "hasNext", "Alt+→", " & 保存"],
@@ -207,6 +204,10 @@
     for (const [id, , title, suffix] of pageButtons) {
       if (byId(id)) byId(id).title = title + (dirty ? suffix : "");
     }
+  }
+
+  function setPosition(line, column) {
+    footer.setPosition(line, column);
   }
 
   function setHistoryButtons(canUndo, canRedo) {
@@ -290,6 +291,8 @@
   }
 
   function renderNavigation(view) {
+    footer.setFile(view.filePath);
+    footer.setAvailable(view.hasPrevious, view.hasNext);
     byId("chapterTitle").textContent = view.chapterTitle;
     byId("pageContext").textContent = view.pageContext;
     byId("pagePosition").textContent = view.pageTotal;
@@ -356,7 +359,7 @@
   const frameId = (id) => pdfFrame?.querySelector(`#${id}`);
   function normalizedPdfSettings(value = {}) {
     // Diff highlighting is saved independently; PDF controls must not overwrite it.
-    const { diffHighlight, ...displaySettings } = value;
+    const { diffHighlight, selectionHighlight, ...displaySettings } = value;
     value = displaySettings;
     const color = (input, fallback) => /^#[0-9a-f]{6}$/i.test(String(input)) ? String(input).toLowerCase() : fallback;
     const scale = typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : PDF_DEFAULTS.scale;
@@ -627,6 +630,7 @@
 
   function init(handlers) {
     Object.assign(listeners, handlers);
+    footer.setNavigation(direction => emit("adjacent", direction));
     if (initialized) return;
     initialized = true;
     initPdfFrame();
@@ -745,10 +749,11 @@
   syncChromeMetrics();
 
   window.ReaderUI = {
-    init, notify, setDirty, setHistoryButtons, renderVolumes, renderToc, renderNavigation, renderTools,
+    init, notify, setDirty, setPosition, setHistoryButtons, renderVolumes, renderToc, renderNavigation, renderTools,
     setMode, setWorkspaceMode, setToc, setPdf, applyVisualTheme, showVisual, setEditorScale,
     byId, editorScale: () => editorScale, isDark: () => body.classList.contains("dark"),
-    getVisualDocument: () => visualFrame.contentDocument
+    getVisualDocument: () => visualFrame.contentDocument,
+    getPdfViewer: () => pdfViewer
   };
 
 /* 编辑工具面板由 index.html 与 reader.html 共用同一个控制器。 */
