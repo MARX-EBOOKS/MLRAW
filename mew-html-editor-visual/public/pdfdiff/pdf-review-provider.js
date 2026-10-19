@@ -194,6 +194,20 @@
       else if (!session.applying) stale(event);
     });
     disposals.push(() => modelChange.dispose(), () => contentChange.dispose());
+    const ownerWindow = target.getDomNode()?.ownerDocument.defaultView;
+    const dirtyIndicator = ownerWindow?.document.getElementById(ownerWindow.mewWorkbench ? 'tabs' : 'saveBtn');
+    const dirtyObserver = new MutationObserver(() => {
+      if (!session?.needsSave || target.getModel() !== session.model) return;
+      const dirty = ownerWindow.mewWorkbench
+        ? [...ownerWindow.mewWorkbench.documents.values()].find(doc => doc.model === session.model)?.dirty
+        : dirtyIndicator.classList.contains('dirty');
+      if (dirty !== false) return;
+      session.needsSave = false; session.manualSave = false;
+      if (valid()) render(true);
+      else { message('已保存。差异更新中…'); controls(); }
+    });
+    if (dirtyIndicator) dirtyObserver.observe(dirtyIndicator, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    disposals.push(() => dirtyObserver.disconnect());
     const compositionStart = target.onDidCompositionStart?.(() => { composing = true; clearTimeout(manualTimer); });
     const compositionEnd = target.onDidCompositionEnd?.(() => {
       composing = false;
