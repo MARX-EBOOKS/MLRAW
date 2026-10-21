@@ -113,48 +113,45 @@
     return states.join('；') + (reasons.length ? `（${reasons.join('；')}）` : '');
   }
   function fontEdits(index, start, end, font) {
-    const original = index.formats[start], keys = ['italic', 'bold'];
-    const changes = keys.filter(key => typeof font[key] === 'boolean' && font[key] !== original[key]);
-    if (!changes.length) return [];
-    const tags = (original.tags || []).filter(tag => changes.some(key =>
-      typeof tag[key] === 'boolean' && tag[key] !== font[key])).sort((a, b) => b.openStart - a.openStart);
+    while (start < end && /\s/u.test(index.raw[start])) start++;
+    while (end > start && /\s/u.test(index.raw[end - 1])) end--;
+    if (start >= end) return [];
+    const keys = ['italic', 'bold'].filter(key => typeof font[key] === 'boolean'
+      && index.formats.slice(start, end).some((style, i) => !/\s/u.test(index.raw[start + i]) && style[key] !== font[key]));
+    if (!keys.length) return [];
+    const tags = [...new Set(index.formats.slice(start, end).flatMap(style => style.tags || []))]
+      .filter(tag => keys.some(key => typeof tag[key] === 'boolean'))
+      .sort((a, b) => a.openStart - b.openStart);
     if (tags.some(tag => tag.closeStart === undefined || !['i', 'em', 'b', 'strong', 'span'].includes(tag.name))) return [];
-    let a = index.starts[start], b = index.ends[end - 1], text = index.source.slice(a, b);
-    for (const key of keys) {
-      const desired = typeof font[key] === 'boolean' ? font[key] : original[key];
-      if (desired && (changes.includes(key) || tags.some(tag => tag[key] === true))) {
-        const pattern = key === 'italic' ? 'i|em' : 'b|strong';
-        // Extend a nearby wrapper rather than adding another pair of tags.
-        // Removed wrappers keep their own boundary handling below.
-        const nearby = !tags.length && changes.length === 1;
-        let left = nearby && new RegExp(`</(${pattern})>([ \\t]*)$`, 'i').exec(index.source.slice(0, a));
-        if (left && !index.formats[start - left[2].length - 1]?.tags.some(tag =>
-          tag.closeEnd === a - left[2].length && tag[key] === true
-          && tag.opening.toLowerCase() === `<${tag.name}>`
-          && keys.every(other => other === key || tag[other] === null || tag[other] === original[other]))) left = null;
-        const name = left?.[1] || (key === 'italic' ? 'i' : 'b');
-        const right = nearby && new RegExp(`^([ \\t]*)<(${left ? name : pattern})>`, 'i').exec(index.source.slice(b));
-        const wrapper = left?.[1] || right?.[2] || name;
-        if (left) a -= left[0].length;
-        if (right) b += right[0].length;
-        text = (left ? left[2] : `<${wrapper}>`) + text + (right ? right[1] : `</${wrapper}>`);
-      }
-    }
-    // Delete a whole wrapper, or move its closing/opening tag to the selection.
+    let a = index.starts[start], b = index.ends[end - 1];
+    // Include complete wrappers, including whitespace at their edges.
     for (const tag of tags) {
-      const before = index.source.slice(tag.openEnd, a), after = index.source.slice(b, tag.closeStart);
-      if (!index.raw.slice(tag.rawStart, start).trim()) { a = tag.openStart; text = before + text; }
-      else {
-        const space = before.match(/[ \t]*$/)[0];
-        a -= space.length; text = tag.closing + space + text;
-      }
-      if (!index.raw.slice(end, tag.rawEnd).trim()) { b = tag.closeEnd; text += after; }
-      else {
-        const space = after.match(/^[ \t]*/)[0];
-        b += space.length; text += space + tag.opening;
-      }
+      if (!index.raw.slice(tag.rawStart, start).trim()) a = Math.min(a, tag.openStart);
+      if (!index.raw.slice(end, tag.rawEnd).trim()) b = Math.max(b, tag.closeEnd);
     }
-    if (changes.some(key => !font[key]) && !tags.length) return [];
+    const removed = tags.flatMap(tag => [
+      { start: tag.openStart, end: tag.openEnd }, { start: tag.closeStart, end: tag.closeEnd }
+    ]).filter(tag => tag.start >= a && tag.end <= b).sort((a, b) => b.start - a.start);
+    const strip = (from, to) => {
+      let text = index.source.slice(from, to);
+      for (const tag of removed) if (tag.start >= from && tag.end <= to)
+        text = text.slice(0, tag.start - from) + text.slice(tag.end - from);
+      return text;
+    };
+    // Use source coordinates so whitespace entities also stay outside the tags.
+    const leading = strip(a, index.starts[start]), trailing = strip(index.ends[end - 1], b);
+    let text = strip(index.starts[start], index.ends[end - 1]);
+    for (const key of keys) if (font[key]) {
+      const name = key === 'italic' ? 'i' : 'b';
+      text = `<${name}>${text}</${name}>`;
+    }
+    text = leading + text + trailing;
+    // Keep the portions of enclosing wrappers outside the selected words.
+    const left = tags.filter(tag => tag.openStart < a), right = tags.filter(tag => tag.closeEnd > b);
+    const before = index.source.slice(0, a).match(/\s*$/u)[0];
+    const after = index.source.slice(b).match(/^\s*/u)[0];
+    if (left.length) { a -= before.length; text = left.slice().reverse().map(tag => tag.closing).join('') + before + text; }
+    if (right.length) { b += after.length; text += after + right.map(tag => tag.opening).join(''); }
     return [{ start: a, end: b, expected: index.source.slice(a, b), text }];
   }
   // Compare formatting only where unchanged text confirms character correspondence.

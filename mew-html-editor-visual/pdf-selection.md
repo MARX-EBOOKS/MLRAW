@@ -1,40 +1,141 @@
-`public/reader.html` loads the shared tools, review provider and selection attachment from `public/pdfdiff/` through the normal static asset route:
+`public/reader.html` loads the review provider and selection attachment from `public/pdfdiff/` through the normal static asset route:
 
 ```html
-<script src="/pdfdiff/pdf-selection-diff.js"></script>
 <script src="/pdfdiff/pdf-review-provider.js"></script>
 <script src="/pdfdiff/pdf-selection.js"></script>
 ```
 
-`pdf-selection-diff.js` owns text decoding, normalization, source/PDF indexes,
-page scopes, contextual and OCR search, and cached bidirectional character maps.
-Its `PdfSelectionDiff.createLocator(options, environment)` API creates a locator
-with reader-local caches. The environment supplies the current PDF, rendered page
-indexes, idle scheduling, and cancellation checks. `findLocations()` returns PDF
+The complete HTTP backend is `reader-server.py`, migrated from `reader-server.js`.
+The JavaScript entry point forwards the existing CLI to Python for compatibility.
+Start it directly with `python reader-server.py -c path/to/.mew-reader.json -p 17000`.
+Install extraction support with `python -m pip install PyMuPDF`.
+
+`pdf_text_backend.py`, beside `reader-server.py`, extracts the embedded text layer
+without running an OCR model. Its page JSON follows the text-result fields of the
+[PaddleOCR-VL-1.6 unified interface](https://github.com/PaddlePaddle/PaddleOCR/blob/main/docs/version3.x/pipeline_usage/PaddleOCR-VL.en.md).
+The local cache schema is 7 (independent of the model version). Each volume has:
+
+```
+OCR_DATA/<pdf-stem>.<path-hash>/
+  manifest.json
+  page-00001.json
+  page-00002.json
+  ...
+```
+
+The manifest stores PDF identity, `interface: "PaddleOCR-VL-1.6"`,
+`source: "embedded_pdf_text"`, `geometry: "pdfjs"`, the shared font table and page
+file indexes with global code-point boundaries. Each page uses `input_path`,
+zero-based `page_index`, `page_count`, and `parsing_res_list`. Each block preserves
+`block_id`, `block_order`, `block_label`, `block_content`, and `block_bbox: null`.
+PDF text blocks are labelled `text`; semantic title/table predictions are not
+invented. No model confidence, preprocessing results or images are fabricated.
+Geometry is intentionally unresolved until PDF.js renders the page.
+
+Finer-grained extensions preserve block and line `start`/`end` offsets relative
+to the page, and each line's ordered `spans`. A span stores `length` (Unicode code
+points) and `font_index`. Starting at the line's `start`, cumulative lengths
+recover each span's exact character boundaries; the line ends with one newline.
+Each page also includes a backend-prepared `comparison` object with `raw` text,
+global UTF-16 `start`/`end`, and ready-to-use `parts` with `fontIndex`. The original
+page/block/line/span fields and their code-point offsets stay unchanged. Text is
+repeated once in `comparison.raw` so the frontend can use it directly; there are
+no text copies in lines/spans or the manifest. There are no character boxes, transforms or per-character style arrays.
+Font metadata retains the exact embedded name, size, flags, bold/italic state,
+color, alpha, ascender and descender. Unreliable OCR style remains unknown.
+
+The complete volume is staged before replacement; all page files plus the
+manifest must total at most 5,000,000 bytes. A size error leaves existing files
+untouched. Schema and PDF modification time/size invalidate old data. Individual
+files are replaced atomically and the manifest is published last. Page results
+carry a document identifier to reject mixed PDF generations. Superseded monolithic
+`.ocr.json`, `.ocr.browser.json` and `.ocr.json.gz` caches are no longer used.
+
+Pre-extract with `python pdf_text_backend.py -c CONFIG`; `--cache-dir DIRECTORY`
+overrides the output location. Reader startup prepares local volumes before
+listening. `pdfTextUrl` points to `/OCR_DATA/<volume-directory>/manifest.json`.
+The backend serves only configured manifest/page paths, sending the saved bytes
+without JSON parsing or PDF extraction. Files contain indented UTF-8 JSON without
+gzip compression. `pdf-selection-diff.js` fetches pages with concurrency limited
+to four and consumes the prepared comparison text and UTF-16 runs directly,
+attaching shared font metadata without rebuilding character offsets.
+`local-ocr-text-reader.js` is used only for embedded PDF text/font fallback when
+the generated JSON is unavailable or invalid. Existing
+source/PDF.js text-layer diff mappings supply DOM spans, selection/highlight
+geometry, popup anchors and precise scrolling. Unloaded targets first navigate
+to their page, then use its live text layer. Remote PDFs retain the PDF.js fallback.
+
+The Python HTML review shares this page cache. Only crop/context requests read
+native character geometry from the requested PDF pages; extracted text must match
+the stored sequence. This geometry is never persisted. Original PDFs and scans
+remain unchanged. Restart the reader and reload the page after changing schemas.
+
+`pdf-review-provider.js` is the runtime entry. It owns normalization, source/PDF
+indexes, page scopes, contextual search, cached bidirectional connections, review
+candidate generation, provider actions and highlights. It loads
+`pdf-selection-diff.js` for font reading, text comparison and edit helpers,
+`replacement-review.js` for reusable highlight/selection tools and the shared
+popup, session, navigation and saving.
+Each script keeps its implementation in a private closure. The font/text script
+receives prepared connection comparisons for format differences and never calls
+back into the provider. The provider reuses each connection's cached text diff.
+Text comparisons use Monaco with the local fallback inside `pdf-selection-diff.js`.
+`PdfReviewReady` resolves after review initialization;
+`pdf-selection.js` waits for it and obtains its locator through the provider.
+Its `PdfReviewProvider.createLocator(options, environment)` API creates a locator
+with reader-local caches. Selection exposes this locator as `PdfSelection.locator`;
+review, including the split editor window, consumes the same locator. Each Monaco
+model/PDF pair owns one current source snapshot. The environment supplies the current PDF, rendered page
+indexes, idle scheduling, and cancellation checks. Selection keeps `findLocations()`,
+`locateSource()`, and `locateLayer()` as private functions using that shared locator.
+`findLocations()` returns PDF
 page targets, `locateSource()` returns a source hit and any difference notice, and
 `locateLayer()` returns character ranges for the rendered text layer.
-`pdf-selection.js` captures selections, supplies that environment, and
-uses those results to scroll, measure DOM ranges, paint highlights and publish selection mappings. Font interpretation, diff decorations, review reporting and popups belong to `pdf-review-provider.js`.
+`pdf-selection.js` captures selections, supplies that environment, and uses its
+results to scroll and publish selection mappings. `pdf-review-provider.js` supplies
+PDF ranges and source decorations to its own `ReviewHighlights` instance.
+`replacement-review.js` owns DOM range measurement, merged highlight rectangles,
+overlay painting/cleanup, Monaco decoration caches and marker selection through
+`ReviewHighlights`, alongside the shared popup. Highlight instances remain
+independent and have no PDF or review-provider dependency.
 
-Review UI and PDF provider callbacks share `pdf-review-provider.js`, documented in [replacement-review.md](replacement-review.md).
+The provider supplies PDF content and actions to the shared popup host, documented in [replacement-review.md](replacement-review.md).
 The “审阅 / 批量替换” submenu has separate switches for PDF review and bidirectional
 selection highlighting. The review popup selects a source field; this script reacts
 through its ordinary selection listener and never opens or manages that popup.
 `PdfSelection.enabled` reports difference highlighting; `selectionEnabled` reports selection synchronization.
 
-Selection events carry rendered index/range metadata; `pdf-review-provider.js` interprets the font runs and displays their summary in the review popup. Intrinsic PDF font flags take priority over font-name hints; generic CSS
-families and absent metadata remain unknown. Mixed selections retain separate runs.
-PDF font-style loading and the base font cache remain in `pdf-selection-diff.js`.
-Page-text requests are shared by indexing and native-layer font loading through
-`PdfSelectionDiff.readPageText()`. Failed requests can retry; document mappings
+Selection events carry rendered index/range metadata. The provider resolves those
+ranges against the saved OCR sequence before producing text or format notices.
+`pdf_text_backend.py` owns PDF text extraction, font metadata, persistent caches,
+and canonical format runs. `local-ocr-text-reader.js` loads that saved data and
+owns all frontend PDF font reading, including text-layer font lookup, operator
+inspection, shared font tasks, and PDF.js fallback when the cache is unavailable.
+`pdf-selection-diff.js` delegates font reading to it and retains source/page
+scope selection, format-run comparison, and edits.
+The browser owns HTML bold/italic interpretation,
+format comparison and source format edits. `differences()` classifies text changes
+and unchanged font runs in one traversal per connection; candidates and decorations
+reuse that result until the source or connection diff changes. `indexFonts()` uses
+the same saved document index without additional PDF reads; only a text-layer
+fallback delegates font extraction to the OCR reader.
+Font differences are emitted only for unchanged aligned characters.
+Failed text requests can retry; document mappings
 and cancellation remain local to each locator. Monaco loading also shares one
-pending request. Review and selection reuse source indexes after edits, retaining
-only unaffected mappings. Shared text significance and changed-range rules live
+pending request. Source edits invalidate all mappings for the pair, including
+markup-only edits. Selection, decorations and review prepare mappings from the new
+snapshot. Manual edits and replacements rediscover review candidates instead of
+only shifting the previous list; unchanged candidates keep their selected choices. Shared text significance and changed-range rules live
 in `pdf-selection-diff.js`; settings persistence and DOM measurement live in
-`pdf-selection.js`; popup state and provider actions live in `pdf-review-provider.js`.
+`pdf-review-provider.js`; popup session state lives in `replacement-review.js`.
+Rendered layer indexes use a 24-page LRU; evicted layer observers are disconnected.
+Each retained page keeps at most 32 geometry results. Per-target transient selection
+mappings keep at most 128 entries, while required prepared passage mappings remain
+available. Page preparation ignores LRU ordering and prunes contained mappings with
+a sorted sweep instead of comparing every pair.
 The “PDF 斜体／粗体探测” menu entry lists styled PDF runs that can be mapped to the
 current HTML, with source navigation. This is inspection only; it does not change
-HTML markup. Font inspection loads PDF operators on demand without rendering or
+HTML markup automatically. Font metadata loads with OCR page reads without rendering or
 modifying the PDF. An OCR font describes the hidden text layer, not the scan's
 visible letter shapes.
 Retained OCR font declarations participate in comparisons even for invisible text
@@ -43,8 +144,7 @@ The popup identifies these as OCR declarations, without claiming scan verificati
 This reads font styles retained in PDFs such as ABBYY exports, not an OCR SDK or
 external XML/hOCR file. Tesseract's `GlyphLessFont` (including subset names) is a
 placeholder and reports both attributes as unknown, never as regular text.
-Operator-read failures also report unknown. Style declarations are checked per
-page. Uniform italic declarations become unknown. When at least 80% of the page's
+Style declarations are checked per page. Uniform italic declarations become unknown. When at least 80% of the page's
 non-whitespace characters claim bold, those bold declarations become unknown and
 no scan-based fallback runs during review or selection loading. Unknown styles
 do not establish a mismatch. These scripts neither render nor modify scan images.
@@ -56,17 +156,16 @@ Remove the three tags and reload the reader to disable the whole feature, includ
 split-window selection capture. The separate editor also loads the shared toolbox and review provider.
 The reader owns and disposes its editor subscriptions on reload or close.
 
-PDF text highlighting works as soon as the reader loads, using only the PDF's
-existing text layer (including an embedded OCR text layer). Pages without a text
-layer receive no highlights. No separate server, OCR process, or npm dependencies
-are needed by this script.
+PDF text highlighting uses the displayed text layer together with the shared
+Python OCR cache. Pages without a text layer receive no highlights. Extraction
+requires PyMuPDF; it reads embedded OCR and never runs a new OCR recognition pass.
 
 For another page served by the reader server, load it manually in the browser
 DevTools console:
 
 ```javascript
 (async () => {
-  for (const src of ["/pdfdiff/pdf-selection-diff.js", "/pdfdiff/pdf-selection.js"]) {
+  for (const src of ["/pdfdiff/pdf-review-provider.js", "/pdfdiff/pdf-selection.js"]) {
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = src; script.onload = resolve; script.onerror = reject;
@@ -210,8 +309,9 @@ the original HTML and PDF offsets, including entities and line hyphenation.
 A changed run maps to its whole counterpart when individual character positions
 are uncertain; a pure deletion has no counterpart to highlight. Connections are
 cached for the Monaco model version and PDF text index. The cache bound scales
-with source length. Source edits rebuild HTML offsets but retain and shift mappings outside the changed text;
-Overlapping mappings are rebuilt; tag-only edits reuse diffs. PDF changes or rebuilt text layers invalidate the relevant maps. Visible
+with source length. Source edits rebuild HTML offsets and all pair mappings.
+Unchanged model versions reuse their snapshot; switching PDFs selects a separate
+pair, and rebuilt text layers get new mappings. Visible
 text layers can prepare their maps while document extraction is still running.
 A selection covered by a visible-page diff highlights immediately without awaiting
 the full-document index. Provisional visible-page matches also use diff, context,
