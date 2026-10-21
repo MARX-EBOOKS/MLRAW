@@ -267,11 +267,12 @@
     return { startLineNumber: a.lineNumber, startColumn: a.column,
       endLineNumber: b.lineNumber, endColumn: b.column };
   }
-  function sourceSegments(index, start, end) {
+  function sourceSegments(index, start, end, includeWhitespace = false) {
     const segments = [];
     for (let at = start; at < end; at++) {
       const a = index.starts[at], b = index.ends[at], last = segments.at(-1);
-      if (/^\s*$|^</.test(index.source?.slice(a, b))) continue;
+      const text = index.source?.slice(a, b);
+      if (/^</.test(text) || !includeWhitespace && /^\s*$/.test(text)) continue;
       if (last && a <= last.end) last.end = Math.max(last.end, b);
       else segments.push({ start: a, end: b });
     }
