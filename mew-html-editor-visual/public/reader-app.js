@@ -340,7 +340,7 @@
       // 左侧网页发起导航时才定位 PDF；UI 会在重复标签中选择离当前物理页最近的一项。
       if (!pdfOrigin) {
         currentPdfPage = { volume: volume.id, pageLabel: String(requestedPage) };
-        reviewPdfReady = ui.setPdf({ url: volume.pdfUrl, pageLabel: String(requestedPage) })
+        reviewPdfReady = ui.setPdf({ url: volume.pdfUrl, textUrl: volume.pdfTextUrl, pageLabel: String(requestedPage) })
           .catch((error) => notify(`PDF 载入失败：${error.message}`, true));
       }
       if (page !== requestedPage) notify(`第 ${requestedPage} 页暂无网页文件，已${readerOnly ? "定位" : "显示"}上一可用页 ${page}`);
@@ -729,8 +729,11 @@
       }
     });
     try {
-      if (state.workspaceMode !== "reader") await ensureEditorRuntime();
-      state.config = await api("/api/reader/config");
+      const [config] = await Promise.all([
+        api("/api/reader/config"),
+        state.workspaceMode !== "reader" ? ensureEditorRuntime() : Promise.resolve()
+      ]);
+      state.config = config;
       const requestedMode = initialParams.get("mode");
       if (requestedMode === "source" || requestedMode === "visual") state.mode = requestedMode;
       if (state.workspaceMode === "reader" && !state.syncSession) state.syncSession = newSession();

@@ -18,7 +18,8 @@
   let pendingPdfOptions = null;
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
   let pdfUrl = "", pdfPageLabels = null, scrollMode = null, pdfWriteTimer = null, pdfRevision = 0;
-  let pdfReady = false;
+  let pdfReady = false, pdfRenderingStates = null;
+  let pdfPageTimer = null, pdfCacheTimer = null;
   let configuredToc = { title: "", items: [] }, pdfToc = [];
   let pdfShortcutActive = false;
   let pdfContextPageNumber = null;
@@ -447,9 +448,39 @@
     return matches?.reduce((best, page) => Math.abs(page - current) < Math.abs(best - current) ? page : best, matches[0]) || null;
   }
   function reportPdfPage() {
+    clearTimeout(pdfPageTimer); pdfPageTimer = null;
     if (!pdfReady || !pdfViewer.pdfDocument) return;
     const pageNumber = pdfViewer.currentPageNumber;
     emit("pdfPageChange", { pageNumber, pageLabel: pdfPageLabels?.[pageNumber - 1] ?? String(pageNumber), url: pdfUrl });
+  }
+  function schedulePdfPage() {
+    clearTimeout(pdfPageTimer);
+    // Do not reload Monaco's model for every intermediate page during a scroll.
+    pdfPageTimer = setTimeout(() => {
+      reportPdfPage();
+      updatePdfTocNavigation();
+    }, 150);
+  }
+  function trimPdfCache() {
+    pdfCacheTimer = null;
+    if (!pdfViewer?.pdfDocument) return;
+    const cached = [...pdfViewer.getCachedPageViews()];
+    const visibleIds = pdfViewer._getVisiblePages().ids;
+    const visible = cached.filter(view => visibleIds.has(view.id));
+    const keep = new Set(visible);
+    const selection = window.getSelection();
+    if (selection?.rangeCount && !selection.isCollapsed) {
+      const range = selection.getRangeAt(0);
+      for (const view of cached) if (range.intersectsNode(view.div)) keep.add(view);
+    }
+    // Keep nearby scans for reverse scrolling, but release distant canvases,
+    // text layers and decoded images. Page views and selection coordinates survive.
+    cached.sort((a, b) => Math.abs(a.id - pdfViewer.currentPageNumber) - Math.abs(b.id - pdfViewer.currentPageNumber));
+    for (const view of cached) {
+      if (keep.size >= Math.max(4, visible.length)) break;
+      keep.add(view);
+    }
+    for (const view of cached) if (!keep.has(view) && view.renderingState === pdfRenderingStates.FINISHED) view.destroy();
   }
   function showPendingPdfPage() {
     const page = pdfPageNumberForLabel(pendingPdfOptions?.pageLabel);
@@ -544,6 +575,7 @@
     pdfRuntimePromise = (async () => {
       const pdfjs = await import("/vendor/pdfjs/build/pdf.mjs"); globalThis.pdfjsLib = pdfjs;
       const viewerModule = await import("/vendor/pdfjs/web/pdf_viewer.mjs"); pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/build/pdf.worker.mjs";
+      pdfRenderingStates = viewerModule.RenderingStates;
       const eventBus = new viewerModule.EventBus(); pdfLinkService = new viewerModule.PDFLinkService({ eventBus });
       pdfViewer = new viewerModule.PDFViewer({
         container: frameId("stage"), viewer: frameId("viewer"), eventBus, linkService: pdfLinkService,
@@ -551,6 +583,22 @@
       });
       pdfLinkService.setViewer(pdfViewer); scrollMode = viewerModule.ScrollMode;
       eventBus.on("pagesinit", () => {
+        for (let i = 0; i < pdfViewer.pagesCount; i++) {
+          const view = pdfViewer.getPageView(i), drawCanvas = view._drawCanvas;
+          view._drawCanvas = async function (...args) {
+            const layer = this.textLayer, viewport = this.viewport;
+            // Lay out OCR before starting the scan's operator list and image decoding.
+            if (layer) {
+              try {
+                await layer.render({ viewport });
+                if (this.textLayer === layer && this.viewport === viewport && this.renderingState === pdfRenderingStates.RUNNING)
+                  eventBus.dispatch("textlayerrendered", { source: this, pageNumber: this.id, error: null });
+              } catch { /* The normal PDF.js text render retries and reports errors. */ }
+            }
+            if (this.viewport !== viewport || this.renderingState !== pdfRenderingStates.RUNNING) return;
+            return drawCanvas.apply(this, args);
+          };
+        }
         pdfViewer.setPageLabels(pdfPageLabels);
         pdfViewer.currentScaleValue = pdfSettings.scale;
         applyPdfSettings();
@@ -559,8 +607,14 @@
         reportPdfPage();
         setPdfStatus();
       });
-      eventBus.on("pagechanging", updatePdfTocNavigation);
-      eventBus.on("pagechanging", reportPdfPage);
+      eventBus.on("pagechanging", schedulePdfPage);
+      frameId("stage").addEventListener("scroll", () => {
+        if (pdfPageTimer !== null) schedulePdfPage();
+      }, { passive: true });
+      eventBus.on("pagerendered", () => {
+        clearTimeout(pdfCacheTimer);
+        pdfCacheTimer = setTimeout(trimPdfCache, 200);
+      });
       eventBus.on("scalechanging", ({ scale, presetValue }) => { pdfSettings.scale = presetValue || String(scale); frameId("zoomValue").value = `${Math.round(scale * 100)}%`; savePdfSettings(); });
       return pdfjs;
     })().catch((error) => { pdfRuntimePromise = null; throw error; });
@@ -574,18 +628,25 @@
     if (url === pdfUrl && (pdfViewer.pdfDocument || pdfLoadingTask)) return showPendingPdfPage();
     const revision = ++pdfRevision;
     pdfReady = false;
+    clearTimeout(pdfPageTimer); pdfPageTimer = null;
+    clearTimeout(pdfCacheTimer); pdfCacheTimer = null;
     pdfToc = []; drawToc();
     pdfUrl = url; setPdfStatus(url ? "正在载入 PDF…" : "此卷未配置 PDF");
     pdfViewer.setDocument(null); pdfLinkService.setDocument(null); pdfPageLabels = null;
     const oldTask = pdfLoadingTask; pdfLoadingTask = null; await oldTask?.destroy();
     if (!url || revision !== pdfRevision) return;
     try {
-      const task = pdfjs.getDocument({ url, cMapUrl: "/vendor/pdfjs/cmaps/", cMapPacked: true, standardFontDataUrl: "/vendor/pdfjs/standard_fonts/", wasmUrl: "/vendor/pdfjs/wasm/" });
+      // Range loading keeps large scans off the network/worker until needed.
+      // Streaming must also be disabled for disableAutoFetch to take effect.
+      const task = pdfjs.getDocument({ url, disableAutoFetch: true, disableStream: true,
+        rangeChunkSize: 256 * 1024,
+        cMapUrl: "/vendor/pdfjs/cmaps/", cMapPacked: true, standardFontDataUrl: "/vendor/pdfjs/standard_fonts/", wasmUrl: "/vendor/pdfjs/wasm/" });
       pdfLoadingTask = task;
       const document = await task.promise;
       if (revision !== pdfRevision || task !== pdfLoadingTask) return document.destroy();
       pdfPageLabels = await document.getPageLabels() || Array.from({ length: document.numPages }, (_, index) => String(index + 1));
       if (revision !== pdfRevision) return document.destroy();
+      document.ocrTextUrl = options.textUrl || null;
       pdfViewer.setDocument(document); pdfLinkService.setDocument(document);
       void loadPdfToc(document, revision);
     } catch (error) {

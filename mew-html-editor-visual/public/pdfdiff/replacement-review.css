@@ -3,6 +3,7 @@
 .replacement-review[data-content-widget]{position:absolute}
 .replacement-review [data-comparison]{white-space:pre-wrap;overflow-wrap:anywhere;max-height:25vh;overflow:auto}
 .replacement-review mark{background:#ffa62855;color:inherit;font-weight:bold}
+.replacement-review mark:empty{display:inline-block;width:0;height:1.1em;vertical-align:-.15em;box-shadow:0 0 0 1px #ffa62855}
 body.dark .replacement-review{background:#25221c;color:#e1d7c4;border-color:#97713c;color-scheme:dark}
 .review-heading,.review-controls,.review-options,.review-feature{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .review-heading [data-title]{flex:1}.review-heading [data-close]{margin-left:auto}
