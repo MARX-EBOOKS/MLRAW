@@ -11,8 +11,8 @@
 (async () => {
   "use strict";
   if (typeof window === "undefined" || window.PdfSelection) return;
-  await window.PdfReviewReady;
-  const review = window.PdfReviewProvider;
+  if (!window.PdfReviewReady) await import('./pdf-review-provider.js');
+  const review = await window.PdfReviewReady;
   if (window.PdfSelection) return;
   const options = {
     viewerModuleUrl: "/vendor/pdfjs/web/pdf_viewer.mjs",
@@ -40,7 +40,7 @@
   } catch {}
   let visualDocument = null, detachVisual = () => {};
   let pairedWindow = null, pairedSession = "";
-  const diff = review.createLocator(options, {
+  const locator = new review.PdfLocator(options, {
     document, getPdf: () => viewer?.pdfDocument,
     getTargets: () => [...layers.values()].filter(page => page.pdf === viewer?.pdfDocument),
     getVisiblePages: () => visiblePages().map(number => ({ number, index: layerIndex(viewer.getPageView(number - 1)?.div) })),
@@ -56,11 +56,10 @@
     },
     onIndexed: () => queueWarm()
   });
-  const { sourceIndex, editorSourceIndex, normalized, lowerBound } = diff;
   cleanup.push(() => detachVisual());
   const status = { state: "waiting-for-pdf", pages: [], matches: 0, differences: [], error: null };
   const api = window.PdfSelection = {
-    status, locator: diff, attachEditor, attachViewer,
+    status, locator, attachEditor, attachViewer,
     highlight: text => select(Array.isArray(text) ? text : [text]),
     clear: () => select([]),
     popupPlacement(anchor, viewport, width, height) {
@@ -115,7 +114,7 @@
       api.clearReviewPointer();
       const model = editor?.getModel();
       if (!model || !items?.length || !diffHighlight) return;
-      const index = editorSourceIndex(model), entries = items.map(({ sourceStart: start, sourceEnd: end }) => ({
+      const index = locator.editorSourceIndex(model), entries = items.map(({ sourceStart: start, sourceEnd: end }) => ({
         index, start, end, marked: true, text: index.raw.slice(start, end),
         before: index.raw.slice(Math.max(0, start - 160), start), after: index.raw.slice(end, end + 160) }));
       reviewPointer = { editor, model, version: model.getVersionId?.(), pdf: viewer?.pdfDocument, entries };
@@ -190,7 +189,7 @@
     if (!selectionHighlight && texts.length) return;
     ++selectionRevision;
     lastInteraction = performance.now();
-    const decode = text => (plain ? String(text || "") : sourceIndex(String(text || "")).raw).trim();
+    const decode = text => (plain ? String(text || "") : locator.sourceIndex(String(text || "")).raw).trim();
     contexts = texts.map((text, i) => {
       const entry = surroundings[i] || {}, value = entry.marked ? text : decode(text);
       const start = entry.start + (plain && !entry.marked ? text.length - text.trimStart().length : 0);
@@ -253,11 +252,11 @@
         return range;
       }) : [];
       if (!marked && !ranges.some(range => model.getOffsetAt(range.getEndPosition()) > model.getOffsetAt(range.getStartPosition()))) { select([]); if (viewer) queueWarm(); return; }
-      const index = editorSourceIndex(model);
+      const index = locator.editorSourceIndex(model);
       if (viewer && index.preparedPdf !== viewer.pdfDocument) queueWarm();
       const entries = ranges.map(range => {
         const start = model.getOffsetAt(range.getStartPosition()), end = model.getOffsetAt(range.getEndPosition());
-        const a = lowerBound(index.ends, start + 1), b = lowerBound(index.starts, end);
+        const { start: a, end: b } = index.rawRange(start, end);
         return { index, marked, start: a, text: end > start ? index.raw.slice(a, b) : "",
           before: index.raw.slice(Math.max(0, a - 160), a), after: index.raw.slice(b, b + 160) };
       });
@@ -342,22 +341,22 @@
     }, 100);
   }
   function warm(numbers = visiblePages()) {
-    const pdf = viewer?.pdfDocument, model = activeEditor?.getModel(), source = model && editorSourceIndex(model);
-    if (pdf && !diff.getDocumentIndex(pdf)) void diff.indexDocument(pdf).catch(() => {});
+    const pdf = viewer?.pdfDocument, model = activeEditor?.getModel(), source = model && locator.editorSourceIndex(model);
+    if (pdf && !locator.getDocumentIndex(pdf)) void locator.indexDocument(pdf).catch(() => {});
     for (const div of layers.keys()) if (!div.isConnected) clearLayer(div);
     const pages = numbers.map(number => layerIndex(viewer.getPageView(number - 1)?.div));
-    diff.prepareSource(source, pages, pdf);
+    locator.prepareSource(source, pages, pdf);
     publishSources();
   }
   function publishSources() {
     if (performance.now() - lastEdit < editIdleDelay) return;
     const pdf = viewer?.pdfDocument;
     const targets = [...layers.values()].filter(page => page.pdf === pdf);
-    const full = diff.getDocumentIndex(pdf);
+    const full = locator.getDocumentIndex(pdf);
     if (full) targets.push(full);
     window.dispatchEvent(new CustomEvent('pdf-selection-sources', { detail: {
       editor: activeEditor, pdf, targets, enabled: diffHighlight,
-      index: activeEditor?.getModel() && editorSourceIndex(activeEditor.getModel())
+      index: activeEditor?.getModel() && locator.editorSourceIndex(activeEditor.getModel())
     } }));
   }
   async function discoverPdf() {
@@ -455,7 +454,7 @@
     const model = editor?.getModel();
     if (!model || !editor.setSelection) return;
     activeEditor = editor;
-    const index = editorSourceIndex(model), { hit, difference } = locateSource(index, chunks);
+    const index = locator.editorSourceIndex(model), { hit, difference } = locateSource(index, chunks);
     select([]);
     for (const chunk of chunks) {
       const result = nativeBoxes(chunk.div, [], [{ range: { start: chunk.start, end: chunk.end }, difference }]);
@@ -530,28 +529,28 @@
       if (contexts.length || reviewPointer) schedule();
     });
     observer.observe(layer, { subtree: true, childList: true, characterData: true, attributes: true });
-    const index = { layer, raw, parts, normalized: normalized(raw), observer, pdf: viewer?.pdfDocument, width: div.clientWidth, height: div.clientHeight };
+    const index = new review.PdfSourceIndex(locator, { layer, raw, parts, observer, pdf, width: div.clientWidth, height: div.clientHeight });
     layers.set(div, index);
     return index;
   }
   function findLocations(pdf, entries) {
-    const documentIndex = diff.getDocumentIndex(pdf);
+    const documentIndex = locator.getDocumentIndex(pdf);
     const visible = visiblePages().map(number => ({ number, index: layerIndex(viewer.getPageView(number - 1)?.div) }));
     for (const source of new Set(entries.map(entry => entry.index).filter(Boolean)))
-      diff.prepareSource(source, visible.map(page => page.index), pdf);
+      locator.prepareSource(source, visible.map(page => page.index), pdf);
     const locations = entries.map(entry => {
       let index = documentIndex, hit = null, number;
       for (const page of visible) {
-        hit = page.index && entry.index && diff.connectedRange(entry.index, page.index, entry.start, entry.end, false, undefined, entry.marked);
+        hit = page.index && entry.index && entry.index.connectedRange(page.index, entry.start, entry.end, false, undefined, entry.marked);
         if (hit) {
           index = page.index;
           number = page.number;
           break;
         }
       }
-      if (!hit && index) hit = (entry.index && diff.connectedRange(entry.index, index, entry.start, entry.end, false, undefined, entry.marked)) || diff.locate(index.raw, entry, index.normalized);
-      if (!hit) return { entry, targets: [], queries: index ? diff.patchedWords(entry, index) : [entry.text] };
-      const connection = hit.connection || (entry.index && diff.rememberConnection(entry.index, entry.start, entry.end, index, hit));
+      if (!hit && index) hit = (entry.index && entry.index.connectedRange(index, entry.start, entry.end, false, undefined, entry.marked)) || index.locate(entry);
+      if (!hit) return { entry, targets: [], queries: index && entry.index ? entry.index.patchedWords(entry.text, index) : [entry.text] };
+      const connection = hit.connection || (entry.index && entry.index.rememberConnection(entry.start, entry.end, index, hit));
       const pages = index.pages || [{ number, start: 0, end: index.raw.length, parts: index.parts }];
       const targets = pages.filter(page => hit.start === hit.end ? hit.start >= page.start && hit.start <= page.end
         : hit.start < page.end && hit.end > page.start).map(page => {
@@ -562,7 +561,7 @@
           marked: entry.marked, text: index.raw.slice(start, end), before: index.raw.slice(Math.max(page.start, start - 160), start),
           after: index.raw.slice(end, Math.min(page.end, end + 160)) };
         if (target.difference && entry.index) target.source = { index: entry.index, start: entry.start, end: entry.end };
-        const sourceRange = entry.marked || entry.start === entry.end ? entry : connection && diff.connectedRange(entry.index, index, start, end, true, connection);
+        const sourceRange = entry.marked || entry.start === entry.end ? entry : connection && entry.index.connectedRange(index, start, end, true, connection);
         if (sourceRange || hit.start === hit.end) Object.assign(target, { index: entry.index,
           start: sourceRange?.start ?? entry.start, end: sourceRange?.end ?? entry.end });
         return target;
@@ -570,30 +569,28 @@
       return { entry, targets };
     });
     if (documentIndex || locations.every(location => location.targets.length)) return locations;
-    return diff.indexDocument(pdf).then(index => index ? findLocations(pdf, entries) : locations);
+    return locator.indexDocument(pdf).then(index => index ? findLocations(pdf, entries) : locations);
   }
   function locateSource(index, chunks) {
     const first = chunks[0], last = chunks.at(-1);
-    diff.prepareSource(index, chunks.map(chunk => chunk.index), viewer?.pdfDocument);
+    locator.prepareSource(index, chunks.map(chunk => chunk.index), viewer?.pdfDocument);
     const entry = {
       text: chunks.map(({ index, start, end }) => index.raw.slice(start, end)).join("\n"),
       before: first.index.raw.slice(Math.max(0, first.start - 160), first.start),
       after: last.index.raw.slice(last.end, last.end + 160)
     };
-    const left = diff.sourcePageScope(index, first.index, true), right = diff.sourcePageScope(index, last.index, true);
-    let hit = chunks.length === 1 && diff.connectedRange(index, first.index, first.start, first.end, true);
+    const left = index.sourcePageScope(first.index, true), right = index.sourcePageScope(last.index, true);
+    let hit = chunks.length === 1 && index.connectedRange(first.index, first.start, first.end, true);
     if (!hit) {
       const scope = left && right && left.start <= right.start ? { start: left.start, end: right.end } : null;
-      const local = scope && diff.locate(index.raw.slice(scope.start, scope.end), entry, left === right ? left.normalized : undefined);
-      hit = local ? { ...local, start: local.start + scope.start, end: local.end + scope.start }
-        : scope ? null : diff.locate(index.raw, entry, index.normalized);
+      hit = index.locate(entry, scope && { ...scope, normalized: left === right ? left.normalized : undefined });
     }
     const html = hit && index.raw.slice(hit.start, hit.end);
     const differs = hit && (hit.connection ? hit.approximate
       : window.PdfSelectionDiff.significantText(html) !== window.PdfSelectionDiff.significantText(entry.text));
     const difference = !hit ? { message: "No reliable HTML match" } : differs ? { html, pdf: entry.text } : null;
     if (chunks.length === 1 && hit && !hit.connection)
-      diff.rememberConnection(index, hit.start, hit.end, first.index, { start: first.start, end: first.end });
+      index.rememberConnection(hit.start, hit.end, first.index, { start: first.start, end: first.end });
     return { hit, difference };
   }
   function locateLayer(index, queries, targets = []) {
@@ -601,19 +598,19 @@
     const hits = [];
     let focusHit = null;
     for (const target of targets) {
-      const connection = target.index && diff.connectedRange(target.index, index, target.start, target.end, false, undefined, target.marked);
-      const hit = target.range || connection || diff.locate(raw, target, index.normalized);
+      const connection = target.index && target.index.connectedRange(index, target.start, target.end, false, undefined, target.marked);
+      const hit = target.range || connection || index.locate(target);
       if (hit) {
-        if (target.index && !connection) diff.rememberConnection(target.index, target.start, target.end, index, hit);
+        if (target.index && !connection) target.index.rememberConnection(target.start, target.end, index, hit);
         hit.difference = target.difference || (hit.approximate ? { html: target.text, pdf: raw.slice(hit.start, hit.end) } : null);
         hit.source = target.source || target.index && { index: target.index, start: target.start, end: target.end };
         if (!focusHit) focusHit = hit;
       }
       // Retain exact fallback highlights when rendered spacing prevents confirmation.
-      for (const match of hit ? [hit] : diff.matches(raw, target.index ? diff.patchedWords(target, index) : [target.text], index.normalized))
+      for (const match of hit ? [hit] : index.matches(target.index ? target.index.patchedWords(target.text, index) : [target.text]))
         if (!hits.some(other => other.start === match.start && other.end === match.end)) hits.push(match);
     }
-    for (const match of diff.matches(raw, queries, index.normalized))
+    for (const match of index.matches(queries))
       if (!hits.some(hit => hit.start === match.start && hit.end === match.end)) hits.push(match);
     return { hits, focusHit };
   }
@@ -676,7 +673,7 @@
         bottom: page.top + (box.y + box.h) * page.height };
       window.dispatchEvent(new CustomEvent('pdf-selection-difference', { detail: {
         editor, model, pdf: viewer?.pdfDocument, notices, anchor, anchorElement: div, anchorBox: box, interactionId,
-        targets: [diff.getDocumentIndex(viewer?.pdfDocument), ...layers.values()].filter(Boolean)
+        targets: [locator.getDocumentIndex(viewer?.pdfDocument), ...layers.values()].filter(Boolean)
       } }));
     }, 0);
   }

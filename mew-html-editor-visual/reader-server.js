@@ -52,7 +52,8 @@ const PORT = Number(valueOf(["-p", "--port"]) || process.env.PORT || 49100);
 const MIME = {
   ".html": "text/html; charset=utf-8", ".htm": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8", ".mjs": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
+  ".css": "text/css; charset=utf-8", 
+  ".md": "text/markdown; charset=utf-8", ".markdown": "text/markdown; charset=utf-8",
   ".pdf": "application/pdf", ".wasm": "application/wasm",
   ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
   ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml"

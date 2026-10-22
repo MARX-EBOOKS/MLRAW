@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   window.ReviewHighlights = { create };
-  function create({ document = window.document, lowerBound, classes = {} }) {
+  function create({ document = window.document, classes = {} }) {
     const { selection: selectionClass = 'review-highlight', pointer: pointerClass = 'review-pointer',
       caret: caretClass = 'review-caret' } = classes;
     const selectionAreas = new Map(), pointerAreas = new Map(), marks = new Map();
@@ -11,7 +11,6 @@
       dispose() { clearHighlights(); clearHighlights(true); clearMarks(); } };
     function measureHighlights(div, index, hits, focusHit) {
       // Measure the indexed text nodes in their reading order.
-      const { parts } = index;
       const boxes = [], notices = [];
       let range;
       const union = (a, b) => {
@@ -23,9 +22,7 @@
         let noticeBox = null;
         const caret = hit.start === hit.end || !!hit.difference && !index.raw.slice(hit.start, hit.end).trim();
         // Reading order can differ from DOM order; measure the indexed text nodes.
-        const first = Math.min(parts.length - 1, lowerBound(parts, hit.start + 1, part => part.end));
-        const last = caret ? first : lowerBound(parts, hit.end, part => part.end);
-        for (const part of parts.slice(first, last + 1)) {
+        for (const part of index.partsInRange(hit.start, caret ? hit.start : hit.end)) {
           range ||= (div.ownerDocument || document).createRange();
           range.setStart(part.node, Math.max(0, hit.start - part.start));
           range.setEnd(part.node, Math.max(0, Math.min(part.node.length, (caret ? hit.start : hit.end) - part.start)));
@@ -127,7 +124,7 @@
 // Shared review popup, session, navigation and saving. Providers own content and actions.
 (() => {
   'use strict';
-  const toolbox = window.PdfSelectionDiff, providers = new Map();
+  const providers = new Map();
   let session = null, generation = 0, pending = null, view = null, previewModels = [], disposals = [], lastRequest = null;
   let widget = null, widgetEditor = null, noticeAnchor = null, noticeLayout = null, manualTimer = null, composing = false;
   let placementFrame = null;
@@ -316,7 +313,7 @@
     }
     const request = ++generation, controller = pending = new AbortController();
     const model = target.getModel(), source = model.getValue(), version = model.getVersionId?.();
-    const context = { editor: target, model, source, version, signal: controller.signal, toolbox, request: requestData };
+    const context = { editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData };
     if (requestData?.snapshot) Object.assign(context, requestData.snapshot.context, { editor: target, model, source, version, signal: controller.signal, request: requestData });
     const modelChange = target.onDidChangeModel(() => close());
     const contentChange = target.onDidChangeModelContent(event => {
