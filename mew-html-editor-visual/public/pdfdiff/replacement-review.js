@@ -258,10 +258,11 @@
     if (!composing) manualTimer = setTimeout(() => void refreshAfterEdit(saved), 0);
   }
   function refreshAfterEdit(saved) {
-    return saved.refreshTask ||= (async () => {
-    if (session !== saved || !saved.manualPending || composing || saved.editor.getModel() !== saved.model) return;
+    if (saved.refreshTask) return saved.refreshTask;
+    if (session !== saved || !saved.manualPending || composing || saved.editor.getModel() !== saved.model) return Promise.resolve();
     const request = ++generation, source = saved.model.getValue(), version = saved.model.getVersionId?.();
     const context = { ...saved.context, source, version, request: { ...saved.context.request, snapshot: null } };
+    return saved.refreshTask = (async () => {
     try {
       const sameReference = !saved.provider.isCurrent || saved.provider.isCurrent(context);
       if (!sameReference) { context.targets = null; context.request = { side: context.request?.side }; }
@@ -276,7 +277,11 @@
       saved.choices = result.choices || new Map(saved.items.map(item => [item.id, saved.choices.get(item.id) || item.options[0].id]));
       render(true);
     } catch (error) { if (session === saved && request === generation) message(error.message); }
-    })().finally(() => { saved.refreshTask = null; });
+    })().finally(() => {
+      saved.refreshTask = null;
+      if (session === saved && saved.manualPending && !composing && request !== generation)
+        manualTimer = setTimeout(() => void refreshAfterEdit(saved), 0);
+    });
   }
   function controls() {
     const item = current(), currentVersion = valid(), ready = (currentVersion || session?.manualPending && !composing) && !!item && !session.applying && !session.saving && !session.waitingApply;
@@ -314,7 +319,7 @@
     const request = ++generation, controller = pending = new AbortController();
     const model = target.getModel(), source = model.getValue(), version = model.getVersionId?.();
     const context = { editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData };
-    if (requestData?.snapshot) Object.assign(context, requestData.snapshot.context, { editor: target, model, source, version, signal: controller.signal, request: requestData });
+    if (requestData?.snapshot) Object.assign(context, requestData.snapshot.context, { editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData });
     const modelChange = target.onDidChangeModel(() => close());
     const contentChange = target.onDidChangeModelContent(event => {
       if (event.isFlush || !session) close();
