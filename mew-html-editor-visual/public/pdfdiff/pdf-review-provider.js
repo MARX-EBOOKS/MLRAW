@@ -204,6 +204,7 @@ class PdfLocator {
     fontPages.set(page, (async () => {
       const ops = window.pdfjsLib?.OPS || { save: 10, restore: 11, setFont: 37, setTextRenderingMode: 38,
         showText: 44, showSpacedText: 45, nextLineShowText: 46, nextLineSetSpacingShowText: 47 };
+      const textOps = new Set([ops.showText, ops.showSpacedText, ops.nextLineShowText, ops.nextLineSetSpacingShowText]);
       const invisibleFonts = new Set(), stack = [];
       let fontId = null, mode = 0, failed = false;
       try {
@@ -214,7 +215,7 @@ class PdfLocator {
           else if (fn === ops.restore && stack.length) [fontId, mode] = stack.pop();
           else if (fn === ops.setFont) fontId = args[0];
           else if (fn === ops.setTextRenderingMode) mode = args[0];
-          else if ([ops.showText, ops.showSpacedText, ops.nextLineShowText, ops.nextLineSetSpacingShowText].includes(fn)
+          else if (textOps.has(fn)
             && (mode & 3) === 3) invisibleFonts.add(fontId);
         }
       } catch {
@@ -274,10 +275,10 @@ class PdfLocator {
     if (spans.length === items.length && spans.every((span, i) => span.textContent === items[i].str))
       spans.forEach((span, i) => names.set(span, items[i]));
     return element => {
-      const css = element.ownerDocument.defaultView.getComputedStyle(element), family = css.fontFamily;
       const item = names.get(element);
       const observed = item && textItemFont(data?.fonts, item);
       if (observed) return observed;
+      const css = element.ownerDocument.defaultView.getComputedStyle(element), family = css.fontFamily;
       const id = item?.fontName || element.dataset?.fontName;
       const key = `${id}:${family}:${css.fontStyle}:${css.fontWeight}`;
       if (!fonts.has(key)) {
@@ -410,11 +411,12 @@ function presentation(context, item) {
   const split = source !== reader, side = split ? context.request?.side || 'html' : 'pdf';
   const request = context.request;
   const element = request?.anchorElement, box = request?.anchorBox;
-  const rect = (!item || side !== 'pdf') && element?.isConnected && element.getBoundingClientRect();
-  const anchor = item && side === 'pdf' ? getLocator().reviewAnchor(item, context.index) : rect && box ? {
+  const rect = element?.isConnected && element.getBoundingClientRect();
+  const anchor = item && side === 'pdf' && getLocator().reviewAnchor(item, context.index)
+    || (!item || item.sourceStart === request?.notice?.source?.start) && (rect && box ? {
     left: rect.left + box.x * rect.width, top: rect.top + box.y * rect.height,
     bottom: rect.top + (box.y + box.h) * rect.height
-  } : request?.anchor;
+  } : request?.anchor);
   const destination = side === 'pdf' ? reader : source;
   return {
     side, switchable: split, switchLabel: side === 'pdf' ? '查看HTML' : '查看PDF', host: destination.ReplacementReview, window: destination,
@@ -456,8 +458,44 @@ function refreshCandidates(context, offset) {
 function reviewItems(index, targets, notice, model) {
   let text = enabled ? index.reviewCandidates(targets) : [];
   const selected = enabled && selectionCandidate(index, notice, model);
-  if (selected) text = [...text.filter(item => item.sourceEnd <= selected.sourceStart && item.sourceStart < selected.sourceStart
-    || item.sourceStart >= selected.sourceEnd && item.sourceEnd > selected.sourceEnd), selected].sort((a, b) => a.sourceStart - b.sourceStart);
+  if (selected) {
+    const selections = [selected], key = pattern(selected, index);
+    const range = selected.range, query = [...notice.html.trim()].length > 1 && model.getValueInRange?.(range);
+    let cursor = 0;
+    // Use Monaco's selection matching in this model, then reuse confirmed faults.
+    for (const match of query && model.findMatches?.(query, false, false, false, null, false) || []) {
+      const from = model.getOffsetAt({ lineNumber: match.range.startLineNumber, column: match.range.startColumn });
+      const to = model.getOffsetAt({ lineNumber: match.range.endLineNumber, column: match.range.endColumn });
+      const { start, end } = index.rawRange(from, to);
+      const html = index.raw.slice(start, end);
+      if (start === selected.sourceStart || index.starts[start] !== from || index.ends[end - 1] !== to
+        || html.toLowerCase() !== notice.html.toLowerCase()) continue;
+      while (cursor < text.length && text[cursor].sourceEnd < start) cursor++;
+      const faults = [];
+      let pdf = '', position = start, crossing = false;
+      for (let at = cursor; at < text.length && text[at].sourceStart <= end; at++) {
+        const item = text[at];
+        if (item.sourceEnd <= start && item.sourceStart < start || item.sourceStart >= end && item.sourceEnd > end) continue;
+        if (item.sourceStart < start || item.sourceEnd > end) { crossing = true; break; }
+        faults.push(item);
+        pdf += index.raw.slice(position, item.sourceStart) + item.comparison.pdf;
+        position = item.sourceEnd;
+      }
+      if (crossing || !faults.length) continue;
+      const candidate = selectionCandidate(index, { html, pdf: pdf + index.raw.slice(position, end),
+        source: { index, start, end } }, model, faults);
+      if (candidate && pattern(candidate, index) === key) selections.push(candidate);
+    }
+    selections.sort((a, b) => a.sourceStart - b.sourceStart);
+    let at = 0;
+    text = [...text.filter(item => {
+      while (at < selections.length && (selections[at].sourceEnd < item.sourceStart
+        || selections[at].sourceEnd === item.sourceStart && item.sourceEnd > item.sourceStart)) at++;
+      const value = selections[at];
+      return !value || item.sourceEnd <= value.sourceStart && item.sourceStart < value.sourceStart
+        || item.sourceStart >= value.sourceEnd && item.sourceEnd > value.sourceEnd;
+    }), ...selections].sort((a, b) => a.sourceStart - b.sourceStart);
+  }
   const formats = fontEnabled ? index.formatDifferences(index.connectionPairs(targets || [])) : [];
   const positions = new Map();
   let cursor = 0;
@@ -471,10 +509,10 @@ function reviewItems(index, targets, notice, model) {
   return [...text, ...formats].sort((a, b) => order(a) - order(b) || Number(!!a.font) - Number(!!b.font))
     .map(item => ({ ...item, pdfSource: { index, start: item.sourceStart, end: item.sourceEnd } }));
 }
-function selectionCandidate(index, notice, model) {
+function selectionCandidate(index, notice, model, candidates) {
   const source = notice?.source;
   if (!source) return null;
-  const selected = index.reviewCandidates([], notice);
+  const selected = candidates || index.reviewCandidates([], notice);
   if (!selected.length) return null;
   return {
     id: `${source.start}:${source.end}`, sourceStart: source.start, sourceEnd: source.end,
@@ -500,6 +538,11 @@ function content(state, item) {
 function pattern(value, index) {
   // Without source context, only the selected candidate may match itself.
   if (!index || !Number.isInteger(value.sourceStart) || !Number.isInteger(value.sourceEnd)) return value;
+  // Longer selections match their stem; single letters retain word-context matching.
+  // Fold unchanged letters only: capitalization faults must still match exactly.
+  if (value.selection && [...value.comparison.html.trim()].length > 1)
+    return JSON.stringify(['selection', getLocator().comparisonParts(value.comparison)
+      .map(part => [part.changed, part.changed ? part.html : part.html.toLowerCase(), part.changed ? part.pdf : part.pdf.toLowerCase()])]);
   const { raw } = index, start = value.sourceStart, end = value.sourceEnd;
   let before = start, after = end;
   const word = /^[\p{L}\p{M}\p{N}_'’\-]+$/u;

@@ -272,6 +272,7 @@
 
   function renderNavigation() {
     const volume = currentVolume();
+    if (!volume) return;
     const index = volume.pages.indexOf(state.page);
     const chapter = (volume.toc || []).findLast(item => item.page <= state.page);
     ui.renderNavigation({

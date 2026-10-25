@@ -629,13 +629,21 @@
     if (cached.results.has(key)) return cached.results.get(key);
     const { hits, focusHit } = locateLayer(index, queries, targets);
     const result = review.measureHighlights(div, index, hits, focusHit);
+    // Reuse the confirmed PDF item when its counterpart has no measurable text.
+    if (!result.notices.length) result.notices = targets.filter(target => target.marked && target.source && target.difference).map(target => {
+      const viewport = viewer.getPageView(target.pageNumber - 1)?.viewport, item = target.item;
+      const point = item && viewport?.convertToViewportPoint(item.transform[4], item.transform[5]);
+      return { ...target.difference, source: target.source, box: point && {
+        x: point[0] / viewport.width, y: (point[1] - item.height * viewport.scale) / viewport.height,
+        w: 0, h: item.height * viewport.scale / viewport.height } };
+    });
     cached.results.set(key, result);
     if (cached.results.size > 32) cached.results.delete(cached.results.keys().next().value);
     return result;
   }
   function paint(div, boxes, notices = [], pointer = false) {
     const painted = review.paintHighlight(div, boxes, options.color, pointer);
-    if (!pointer && painted) publishDifferences(div, painted, notices);
+    if (!pointer && notices.length) publishDifferences(div, painted, notices);
   }
   async function refreshReviewPointer() {
     const pointer = reviewPointer;
@@ -666,12 +674,12 @@
     const editor = activeEditor, model = editor?.getModel(), selected = selectionRevision;
     if (notices.length) setTimeout(function publish() {
       if (!diffHighlight || !selectionHighlight || stopped || selected !== selectionRevision || notifiedSelection === selected
-        || !painted.node.isConnected || review.getHighlight(div) !== painted) return;
+        || !div.isConnected || painted && (!painted.node.isConnected || review.getHighlight(div) !== painted)) return;
       // Opening review selects its candidate; wait until the user's drag ends.
       if (selecting) { pendingDifference = publish; return; }
       notifiedSelection = selected;
       const box = notices[0].box, page = div.getBoundingClientRect();
-      const anchor = { left: page.left + box.x * page.width, top: page.top + box.y * page.height,
+      const anchor = box && { left: page.left + box.x * page.width, top: page.top + box.y * page.height,
         bottom: page.top + (box.y + box.h) * page.height };
       window.dispatchEvent(new CustomEvent('pdf-selection-difference', { detail: {
         editor, model, pdf: viewer?.pdfDocument, notices, anchor, anchorElement: div, anchorBox: box, interactionId,

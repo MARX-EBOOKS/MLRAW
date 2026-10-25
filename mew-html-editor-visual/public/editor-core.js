@@ -301,10 +301,11 @@
     async toggleFind({ replace = true, toggleIfVisible = true, readClipboard = false } = {}) {
       const visible = this.editor.getDomNode()?.querySelector(".find-widget")?.classList.contains("visible");
       if (visible && toggleIfVisible) return this.editor.trigger("mew", "closeFindWidget");
-      const clipboard = readClipboard && !visible && navigator.clipboard?.readText?.().catch(() => null);
+      const selected = this.model?.getValueInRange(this.editor.getSelection());
+      const clipboard = !selected && readClipboard && !visible && navigator.clipboard?.readText?.().catch(() => null);
       if (!visible) this.focus();
       await this.editor.getAction(replace ? "editor.action.startFindReplaceAction" : "actions.find")?.run();
-      const text = await clipboard;
+      const text = selected || await clipboard;
       if (text) this.editor.getContribution("editor.contrib.findController")?.setSearchString(text.replace(/\r\n?/g, "\n"));
     }
   }
