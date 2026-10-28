@@ -85,6 +85,7 @@ function readerSettings(value = {}) {
     horizontal: Boolean(value.horizontal),
     scale: typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : "page-width",
     diffHighlight: value.diffHighlight !== false,
+    sourceDiffHighlight: value.sourceDiffHighlight !== false,
     selectionHighlight: value.selectionHighlight !== false
   };
 }

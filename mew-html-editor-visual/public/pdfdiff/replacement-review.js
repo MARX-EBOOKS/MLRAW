@@ -21,15 +21,17 @@
       for (const hit of hits) {
         let noticeBox = null;
         const caret = hit.start === hit.end || !!hit.difference && !index.raw.slice(hit.start, hit.end).trim();
+        const at = caret && hit.endBias ? Math.max(0, hit.start - 1) : hit.start;
         // Reading order can differ from DOM order; measure the indexed text nodes.
-        for (const part of index.partsInRange(hit.start, caret ? hit.start : hit.end)) {
+        for (const part of index.partsInRange(at, caret ? at : hit.end)) {
           range ||= (div.ownerDocument || document).createRange();
           range.setStart(part.node, Math.max(0, hit.start - part.start));
           range.setEnd(part.node, Math.max(0, Math.min(part.node.length, (caret ? hit.start : hit.end) - part.start)));
-          for (let box of range.getClientRects()) if ((box.width || caret) && box.height) {
+          if (!caret && !range.toString().trim()) continue;
+          for (let box of caret ? [range.getBoundingClientRect()] : range.getClientRects()) if ((box.width || caret) && box.height) {
             // Collapsed ranges can have a fractional width in Chromium. Always
             // draw missing text as a visible caret at the insertion point.
-            if (caret) box = { left: box.left, right: box.left + 2, top: box.top, width: 2, height: box.height, caret: true };
+            if (caret) box = { left: box.left - 2, right: box.left + 2, top: box.top, width: 4, height: box.height, caret: true };
             const previous = boxes.at(-1);
             // Range rects can include both a span and its text, or adjoining spans.
             if (previous && !previous.caret && !box.caret && Math.abs(previous.top - box.top) < .5 && Math.abs(previous.height - box.height) < .5
@@ -75,7 +77,7 @@
           overlay.append(mark);
         }
         mark.style.cssText = `position:absolute;left:${box.x * 100}%;top:${box.y * 100}%;width:${box.w * 100}%;height:${box.h * 100}%;border-radius:2px;pointer-events:none;`;
-        mark.style.background = box.caret ? '#d58b24' : color;
+        mark.style.background = color;
         mark.classList.toggle(caretClass, box.caret);
       }
       while (overlay.children.length > boxes.length) overlay.lastElementChild.remove();
@@ -90,31 +92,42 @@
       }
     }
     function clearMarks() {
-      for (const state of marks.values()) { state.collection.clear(); state.dispose?.(); state.style.remove(); }
+      for (const state of marks.values()) { state.collection.clear(); state.dispose?.(); state.style?.remove(); }
       marks.clear();
     }
     function updateSource(editor, key, decorations, css) {
       let state = marks.get(editor);
       if (!state) {
-        const doc = editor.getDomNode()?.ownerDocument || document, style = doc.createElement('style');
-        style.textContent = css;
-        doc.head.append(style);
+        const doc = editor.getDomNode()?.ownerDocument || document, style = css ? doc.createElement('style') : null;
+        if (style) { style.textContent = css; doc.head.append(style); }
         state = { collection: editor.createDecorationsCollection(), style };
         const subscription = editor.onDidChangeModel?.(() => { state.key = null; state.collection.clear(); });
         state.dispose = () => subscription?.dispose();
         marks.set(editor, state);
       }
       if (state.key?.length === key.length && key.every((value, i) => value === state.key[i])) return;
-      state.collection.set(decorations());
+      const values = decorations();
+      for (const { options } of values) if (options.linesDecorationsClassName === 'mew-ocr-diff-line') {
+        delete options.linesDecorationsClassName; delete options.linesDecorationsTooltip;
+      }
+      state.collection.set(values);
+      editor.render?.(true);
       state.key = key;
     }
     function selectionRange(editor, event, range) {
+      if (event?.source === 'replacement-review-close') return null;
       // A text drag owns its full range, even when it ends on a diff marker.
       if (!event?.lineRange && !range.isEmpty?.()) return null;
       const collection = marks.get(editor)?.collection, position = event?.position || range.getStartPosition();
       for (let i = 0; i < (collection?.length || 0); i++) {
         const mark = collection.getRange(i);
-        if (event?.lineRange ? mark?.intersectRanges(event.lineRange) : mark?.containsPosition(position)) return mark;
+        if (event?.lineRange ? mark?.intersectRanges(event.lineRange) : mark?.containsPosition(position)
+          && (mark.isEmpty() || position.lineNumber !== mark.endLineNumber || position.column !== mark.endColumn)) return mark;
+        // Missing text beside a space must also be reachable from that space.
+        if (!event?.lineRange && mark?.isEmpty() && position.lineNumber === mark.startLineNumber
+          && position.column + 1 === mark.startColumn && /^\s$/u.test(editor.getModel().getValueInRange({
+            startLineNumber: position.lineNumber, startColumn: position.column,
+            endLineNumber: mark.startLineNumber, endColumn: mark.startColumn }))) return mark;
       }
       return null;
     }
@@ -125,9 +138,11 @@
 (() => {
   'use strict';
   const providers = new Map();
+  const previewKey = 'mew-review-preview';
   let session = null, generation = 0, pending = null, view = null, previewModels = [], disposals = [], lastRequest = null;
   let widget = null, widgetEditor = null, noticeAnchor = null, noticeLayout = null, manualTimer = null, composing = false;
-  let placementFrame = null;
+  let placementFrame = null, returningToWindow = !document.hasFocus();
+  const revisionMarks = window.ReviewHighlights.create({ document });
   const menu = document.getElementById('replacementFeatures');
   const panel = document.createElement('section');
   panel.className = 'replacement-review'; panel.hidden = true;
@@ -135,21 +150,29 @@
   panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', '审阅与批量替换');
   panel.innerHTML = `<div class="review-heading"><strong data-title></strong><span data-position></span><button type="button" data-switch hidden></button><button type="button" data-close aria-label="关闭审阅">×</button></div>
     <p data-status role="status"></p><div data-comparison></div><div data-options class="review-options"></div>
-    <div class="review-controls"><button type="button" data-prev aria-label="上一条" title="上一条">↑</button><button type="button" data-next aria-label="下一条" title="下一条">↓</button><button type="button" data-apply>应用本条</button><button type="button" data-advance>应用并下一条</button><button type="button" data-save>替换&amp;保存</button></div>
+    <div class="review-controls"><button type="button" data-prev aria-label="上一条" title="上一条">↑</button><button type="button" data-next aria-label="下一条" title="下一条">↓</button><button type="button" data-apply aria-pressed="false" title="开启或关闭修改预览，不更改正文">预览</button><button type="button" data-advance>应用并下一条</button><button type="button" data-save>替换&amp;保存</button></div>
     <details data-expanded><summary>差异预览与批量操作</summary><div class="review-controls"><label><input type="checkbox" data-file>整个文件 diff</label><button type="button" data-all>应用全部候选的所选方案</button></div><div data-preview data-review-preview></div></details>`;
   document.body.append(panel);
-  const fields = new Map();
-  const get = name => {
-    if (!fields.has(name)) fields.set(name, panel.querySelector(`[data-${name}]`));
-    return fields.get(name);
-  };
+  const fields = Object.create(null);
+  const get = name => fields[name] ||= panel.querySelector(`[data-${name}]`);
   function workspace() {
     const owner = session?.editor.getDomNode()?.ownerDocument.defaultView;
     return owner?.mewWorkbench || owner?.readerMonaco;
   }
   function message(text) { get('status').textContent = text; get('status').hidden = !text; }
   function current() { return session?.items[session.position]; }
+  function selectedEdits(all = false) {
+    return (all ? session.items : session.provider.matchingItems?.(current(), session.context, session.items) || [current()])
+      .flatMap(item => item?.options.find(value => value.id === session.choices.get(item.id))?.edits || []);
+  }
   function presentation() { return session?.provider.presentation?.(session.context, current()) || noticeLayout; }
+  function opposite(state) {
+    const layout = state.provider.presentation?.(state.context, state.items[state.position]);
+    if (!layout?.switchable) return null;
+    const request = { ...state.context.request, side: layout.side === 'pdf' ? 'html' : 'pdf' };
+    const peer = state.provider.presentation({ ...state.context, request }, state.items[state.position]);
+    return peer?.host && peer.host !== window.ReplacementReview ? { ...peer, request } : null;
+  }
   function valid() {
     return session && !session.stale && session.editor.getModel() === session.model
       && (session.version !== undefined ? session.model.getVersionId?.() === session.version : session.model.getValue() === session.source)
@@ -218,32 +241,31 @@
     panel.style.top = ''; panel.style.left = '';
     target.addContentWidget(widget);
   }
-  function close(dismiss = true, restoreFocus = true) {
+  function close(dismiss = true, restoreFocus = true, position = null) {
     cancelAnimationFrame(placementFrame); placementFrame = null;
     clearTimeout(manualTimer); manualTimer = null; composing = false;
     ++generation; pending?.abort(); pending = null;
     disposals.splice(0).forEach(dispose => dispose());
+    revisionMarks.clearMarks();
     clearPreview(); panel.hidden = true; lastRequest = null; noticeAnchor = noticeLayout = null;
     if (widget) { widgetEditor.removeContentWidget(widget); widget = widgetEditor = null; document.body.append(panel); delete panel.dataset.contentWidget; panel.style.cssText = ''; }
     const previous = session; session = null;
     previous?.provider.onClose?.(previous.context);
-    if (previous && dismiss) window.dispatchEvent(new CustomEvent('replacement-review-closed', { detail: {
-      id: previous.provider.id, editor: previous.editor, model: previous.model
-    } }));
+    if (dismiss && previous && previous.editor.getModel() === previous.model) {
+      const selected = previous.editor.getSelection();
+      if (selected && (position || restoreFocus && !selected.isEmpty())) previous.editor.setPosition(position || selected.getPosition(), 'replacement-review-close');
+    }
+    if (dismiss && previous) opposite(previous)?.host.close(false, false);
+    const detail = dismiss && previous && { id: previous.provider.id, editor: previous.editor, model: previous.model };
+    if (detail) window.dispatchEvent(new CustomEvent('replacement-review-closed', { detail }));
     const owner = previous?.editor.getDomNode()?.ownerDocument.defaultView;
-    if (previous && dismiss && owner && owner !== window) owner.dispatchEvent(new owner.CustomEvent('replacement-review-closed', { detail: {
-      id: previous.provider.id, editor: previous.editor, model: previous.model
-    } }));
+    if (detail && owner && owner !== window) owner.dispatchEvent(new owner.CustomEvent('replacement-review-closed', { detail }));
     if (dismiss && restoreFocus && panel.dataset.side !== 'pdf') previous?.editor.focus();
   }
   function stale(event) {
     if (!session) return;
-    session.stale = true; ++generation; clearPreview();
-    queueManualRefresh(event);
-  }
-  function queueManualRefresh(event) {
+    session.stale = true; ++generation; clearPreview(); revisionMarks.clearMarks();
     const saved = session;
-    if (!saved) return;
     if (!saved.manualPending) saved.resumeOffset = saved.anchorOffset ?? 0;
     // Monaco change offsets refer to the source before this event.
     const offset = saved.resumeOffset;
@@ -255,7 +277,7 @@
     if (event) { saved.needsSave = true; saved.manualSave = true; }
     clearTimeout(manualTimer);
     message('正在自动重新计算差异…' + (saved.needsSave ? ' 内容已修改，请保存。' : '')); controls();
-    if (!composing) manualTimer = setTimeout(() => void refreshAfterEdit(saved), 0);
+    if (!composing) manualTimer = setTimeout(() => void refreshAfterEdit(saved), 350);
   }
   function refreshAfterEdit(saved) {
     if (saved.refreshTask) return saved.refreshTask;
@@ -284,15 +306,21 @@
     });
   }
   function controls() {
-    const item = current(), currentVersion = valid(), ready = (currentVersion || session?.manualPending && !composing) && !!item && !session.applying && !session.saving && !session.waitingApply;
-    for (const name of ['apply', 'advance', 'all']) get(name).disabled = !ready || !session?.provider.apply || session.content?.apply === false;
+    const item = current(), currentVersion = valid(), busy = !!(session?.applying || session?.saving);
+    const ready = (currentVersion || session?.manualPending && !composing) && !!item && !busy && !session.waitingApply;
+    const canApply = ready && session.provider.apply && session.content?.apply !== false;
+    get('apply').disabled = !currentVersion || !item || busy;
+    for (const name of ['advance', 'all']) get(name).disabled = !canApply;
     get('save').textContent = session?.manualSave ? '保存修改' : '替换&保存';
-    get('save').disabled = !workspace()?.save || !!session?.saving || !!session?.applying || !(session?.manualSave
-      ? session.editor.getModel() === session.model : ready && session?.provider.apply && session.content?.apply !== false);
+    get('save').disabled = !workspace()?.save || busy || !(session?.manualSave ? session.editor.getModel() === session.model : canApply);
     const blocked = !currentVersion || !!session?.applying;
     get('prev').disabled = blocked || session.position <= 0;
     get('next').disabled = blocked || session.position >= session.items.length - 1;
     get('position').textContent = session ? `${Math.min(session.position + 1, session.items.length)} / ${session.items.length}` : '';
+  }
+  function subscribe(target, event, callback) {
+    const listener = target[event]?.(callback);
+    if (listener) disposals.push(() => listener.dispose());
   }
   async function open(id, suppliedEditor, focusId, fallbackPosition = 0, requestData = null) {
     const provider = providers.get(id), target = suppliedEditor || window.mewWorkbench?.editor || window.readerMonaco?.editor;
@@ -318,14 +346,12 @@
     }
     const request = ++generation, controller = pending = new AbortController();
     const model = target.getModel(), source = model.getValue(), version = model.getVersionId?.();
-    const context = { editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData };
-    if (requestData?.snapshot) Object.assign(context, requestData.snapshot.context, { editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData });
-    const modelChange = target.onDidChangeModel(() => close());
-    const contentChange = target.onDidChangeModelContent(event => {
+    const context = { ...requestData?.snapshot?.context, editor: target, model, source, version, signal: controller.signal, toolbox: window.PdfSelectionDiff, request: requestData };
+    subscribe(target, 'onDidChangeModel', () => close());
+    subscribe(target, 'onDidChangeModelContent', event => {
       if (event.isFlush || !session) close();
       else if (!session.applying) stale(event);
     });
-    disposals.push(() => modelChange.dispose(), () => contentChange.dispose());
     const ownerWindow = target.getDomNode()?.ownerDocument.defaultView;
     const dirtyIndicator = ownerWindow?.document.getElementById(ownerWindow.mewWorkbench ? 'tabs' : 'saveBtn');
     const dirtyObserver = new MutationObserver(() => {
@@ -340,21 +366,21 @@
     });
     if (dirtyIndicator) dirtyObserver.observe(dirtyIndicator, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     disposals.push(() => dirtyObserver.disconnect());
-    const compositionStart = target.onDidCompositionStart?.(() => { composing = true; clearTimeout(manualTimer); });
-    const compositionEnd = target.onDidCompositionEnd?.(() => {
+    subscribe(target, 'onDidCompositionStart', () => { composing = true; clearTimeout(manualTimer); });
+    subscribe(target, 'onDidCompositionEnd', () => {
       composing = false;
       if (session?.manualPending) { const saved = session; manualTimer = setTimeout(() => void refreshAfterEdit(saved), 0); }
     });
-    disposals.push(() => compositionStart?.dispose(), () => compositionEnd?.dispose());
     // Keep an opening session so typing while extraction runs schedules a fresh calculation.
     session = { provider, editor: target, model, source, version, context, items: [], position: 0,
-      choices: new Map(), manualSave: requestData?.snapshot?.manualSave || false, needsSave: requestData?.snapshot?.needsSave || false };
-    const scroll = target.onDidScrollChange(queuePlace); disposals.push(() => scroll.dispose());
+      choices: new Map(),
+      manualSave: requestData?.snapshot?.manualSave || false, needsSave: requestData?.snapshot?.needsSave || false };
+    subscribe(target, 'onDidScrollChange', queuePlace);
     if (placement?.container) {
-      const container = placement.container, move = queuePlace;
-      container.addEventListener('scroll', move); disposals.push(() => container.removeEventListener('scroll', move));
-      placement.eventBus?.on('textlayerrendered', move);
-      disposals.push(() => placement.eventBus?.off('textlayerrendered', move));
+      const container = placement.container;
+      container.addEventListener('scroll', queuePlace); disposals.push(() => container.removeEventListener('scroll', queuePlace));
+      placement.eventBus?.on('textlayerrendered', queuePlace);
+      disposals.push(() => placement.eventBus?.off('textlayerrendered', queuePlace));
     }
     message('正在计算候选…'); place(target);
     try {
@@ -367,25 +393,27 @@
       const items = validateCandidates(result);
       let found = items.findIndex(item => item.id === focusId);
       if (found < 0) found = provider.focusIndex?.(items, requestData) ?? -1;
-      session = { provider, editor: target, model, source, version, context, items,
+      Object.assign(session, { items,
         position: found >= 0 ? found : Math.max(0, Math.min(fallbackPosition, items.length - 1)),
-        manualSave: snapshot?.manualSave || false, needsSave: snapshot?.needsSave || false, choices: new Map(items.map(item => [item.id, snapshot?.choices.get(item.id) || item.options[0].id])) };
-      render(!!requestData);
+        manualSave: snapshot?.manualSave || false, needsSave: snapshot?.needsSave || false, choices: new Map(items.map(item => [item.id, snapshot?.choices.get(item.id) || item.options[0].id])) });
+      render(!!requestData, !!requestData?.mirror);
     } catch (error) { if (request === generation) {
       if (provider.isCurrent && !provider.isCurrent(context)) stale();
       else { message(error.message); controls(); }
     } }
     finally { if (pending === controller) pending = null; }
   }
-  function render(preserveSelection = false) {
+  function render(preserveSelection = false, mirrored = false) {
     if (!session) return;
     const item = current();
     session.content = session.provider.content?.(session, item) || {};
     const content = session.content;
+    let previewEnabled = false;
+    try { previewEnabled = localStorage.getItem(previewKey) === 'true'; } catch {}
+    get('apply').setAttribute('aria-pressed', String(previewEnabled));
     get('options').replaceChildren(); controls();
     message((content.message || '') + (session.needsSave ? ' 内容已修改，请保存。' : '')); comparison(content.comparison);
     get('title').textContent = content.title || session.provider.label;
-    get('apply').textContent = content.applyLabel || '应用本条';
     for (const name of ['advance', 'expanded', 'all']) get(name).hidden = content[name] === false;
     if (item) {
       for (const value of content.options || []) {
@@ -394,9 +422,29 @@
         input.onchange = () => { session.choices.set(item.id, value.id); render(); };
         label.append(input, document.createTextNode(value.label)); get('options').append(label);
       }
-      selectField(preserveSelection); session.provider.onSelect?.(item, session.context, session.items);
+      selectField(preserveSelection); session.provider.onSelect?.(item, session.context, session.items, previewEnabled);
     } else session.provider.onClose?.(session.context);
+    if (session.editor.getDomNode()?.ownerDocument === document) {
+      revisionMarks.updateSource(session.editor, [session.model, session.version ?? session.source, item, session.choices.get(item?.id), previewEnabled],
+        () => [...(previewEnabled ? selectedEdits() : []).flatMap(edit => {
+          if (edit.options) return [edit];
+          let offset = edit.start;
+          return session.context.toolbox.textDiff(session.source.slice(edit.start, edit.end), edit.text, true).parts.flatMap(part => {
+            const start = offset;
+            offset += part.html.length;
+            return part.changed ? [{ start, end: offset, text: part.pdf }] : [];
+          });
+        }).map(edit => ({
+          range: session.context.toolbox.rangeAt(session.model, edit.start, edit.end),
+          options: edit.options || { description: 'Revision preview', stickiness: 1, showIfCollapsed: true,
+            inlineClassName: edit.end > edit.start ? 'mew-review-current' : undefined,
+            beforeContentClassName: edit.start === edit.end && edit.text ? 'mew-review-insert' : undefined,
+            after: edit.text ? { content: edit.text, inlineClassName: 'mew-review-proposed', cursorStops: 0 } : undefined }
+        })), ...(previewEnabled ? content.previewDecorations || [] : [])]);
+    }
     void preview(); place(session.editor);
+    const peer = !mirrored && opposite(session);
+    if (peer) peer.host.mirror(session, { ...peer.request, mirror: true, snapshot: { ...session } });
   }
   function comparison(rows = []) {
     get('comparison').replaceChildren();
@@ -405,6 +453,9 @@
       if (row.label) line.append(`${row.label}: `);
       for (const part of row.parts || []) {
         const span = document.createElement(part.changed ? 'mark' : 'span'); span.textContent = part.text; line.append(span);
+        if (part.changed && current()?.selection) { span.style.cursor = 'pointer'; span.onclick = () => { if (!valid()) return;
+          const parts = current().comparison.comparisonDiff.parts, at = row.parts.indexOf(part), start = current().sourceStart + parts.slice(0, at).reduce((offset, value) => offset + value.html.length, 0), owner = session.context.index.locator.document.defaultView;
+          session.editor.setSelection(session.context.index.sourceRange(session.model, start, start + parts[at].html.length)); owner.dispatchEvent(new owner.CustomEvent('pdf-selection-difference', { detail: { ...session.context, ...session.context.request, interactionId: undefined, snapshot: null, notices: [{ ...parts[at], source: { index: session.context.index, start, end: start + parts[at].html.length } }] } })); }; }
       }
       get('comparison').append(line);
     }
@@ -438,16 +489,14 @@
     return open(id, target, focusId, 0, request);
   }
   function selectField(preserveSelection) {
-    const selected = preserveSelection && session.editor.getSelection();
-    const keep = selected && !selected.isEmpty();
-    const range = keep ? selected : session.content?.range;
-    session.anchor = range;
+    const range = preserveSelection && session.editor.getSelection() || session.content?.range;
+    session.anchor = session.content?.range ? session.model.validateRange(session.content.range) : range;
     if (range) {
       session.anchorOffset = session.model.getOffsetAt({ lineNumber: range.startLineNumber, column: range.startColumn });
       if (!preserveSelection) {
-        session.editor.setSelection(range);
-        session.editor.revealRangeInCenterIfOutsideViewport(range);
+        session.editor.setSelection(session.model.validateRange(range));
       }
+      session.editor.revealRangeInCenterIfOutsideViewport(session.anchor);
     }
   }
   async function preview() {
@@ -456,7 +505,8 @@
     try {
       const api = await window.MewEditorCore.loadMonaco();
       if (session !== saved || request !== generation || !valid() || !get('expanded').open) return;
-      const data = await session.provider.preview?.(session, get('file').checked);
+      const data = session.provider.preview ? await session.provider.preview(session, get('file').checked)
+        : { before: session.source, after: window.PdfSelectionDiff.previewEdits(session.source, selectedEdits(get('file').checked)), language: session.model.getLanguageId() };
       if (!data || session !== saved || request !== generation || !valid()) return;
       const { before, after, language = 'plaintext' } = data;
       if (!view) view = api.editor.createDiffEditor(get('preview'), { automaticLayout: true, readOnly: true, originalEditable: false,
@@ -466,7 +516,7 @@
       view.setModel({ original: previewModels[0], modified: previewModels[1] });
     } catch (error) { if (session === saved && request === generation) { clearPreview(); message(error.message); } }
   }
-  async function apply(all, advance = false) {
+  async function apply(all) {
     const saved = session;
     if (saved?.waitingApply) return;
     if (saved?.refreshTask || saved?.manualPending && !composing)
@@ -489,14 +539,11 @@
       if (saved.context.request) saved.context.request = { ...saved.context.request, snapshot: null };
       if (!valid()) { stale(); return; }
       render();
-      saved.applying = false; controls();
-      if (advance && !saved.items.length) await navigate(1);
       return true;
     } catch (error) {
       if (session !== saved) return;
-      saved.applying = false;
       if (saved.model.getValue() !== saved.source) stale();
-      message(error.message); controls();
+      message(error.message);
     } finally { saved.applying = false; controls(); }
   }
   function navigate(direction) {
@@ -511,7 +558,7 @@
   }
   function place(target = session?.editor) {
     if (panel.hidden) return;
-    const layout = presentation(), pdfSide = layout?.side === 'pdf';
+    const layout = presentation(), pdfSide = layout?.side === 'pdf', compact = panel.classList.contains('compact');
     const node = pdfSide ? layout.container : target?.getDomNode(), rect = node?.getBoundingClientRect();
     if (layout) {
       panel.dataset.side = layout.side;
@@ -519,66 +566,45 @@
       get('switch').textContent = layout.switchLabel || '';
     }
     const left = Math.max(8, rect?.left || 8), right = Math.min(innerWidth - 8, rect?.right || innerWidth - 8);
-    panel.style.width = panel.classList.contains('compact') ? 'max-content' : `${Math.max(0, Math.min(460, right - left))}px`;
-    panel.style.maxWidth = `${Math.max(0, Math.min(panel.classList.contains('compact') ? 280 : 460, right - left))}px`;
-    panel.style.maxHeight = `${Math.max(100, Math.min(innerHeight - 16, (rect?.height || innerHeight) * (panel.classList.contains('compact') ? .45 : .7)))}px`;
+    panel.style.width = compact ? 'max-content' : `${Math.max(0, Math.min(460, right - left))}px`;
+    panel.style.maxWidth = `${Math.max(0, Math.min(compact ? 280 : 460, right - left))}px`;
+    panel.style.maxHeight = `${Math.max(100, Math.min(innerHeight - 16, (rect?.height || innerHeight) * (compact ? .45 : .7)))}px`;
     if (widget) { widgetEditor.layoutContentWidget(widget); return; }
     const range = session?.anchor;
     const position = !pdfSide && range ? target.getScrolledVisiblePosition({ lineNumber: range.startLineNumber, column: range.startColumn }) : null;
     const top = Math.max(8, rect?.top || 8), bottom = Math.min(innerHeight - 8, rect?.bottom || innerHeight - 8);
     const fragment = layout?.anchor || noticeAnchor;
-    // Never show a new candidate at the preceding selection's coordinates.
-    panel.style.visibility = pdfSide && current() && !fragment ? 'hidden' : '';
     const anchor = Math.max(top, Math.min(bottom, fragment?.top ?? (rect?.top || 0) + (position?.top ?? 40)));
     const height = panel.getBoundingClientRect().height;
-    const above = anchor - height - 8;
-    if (pdfSide && fragment) {
-      const placement = layout.window?.PdfSelection?.popupPlacement(fragment, { left, right, top, bottom }, panel.offsetWidth, height)
-        || { left: Math.max(left, Math.min(right - panel.offsetWidth, fragment.left)), height,
-          top: Math.max(top, Math.min(bottom - height, above >= top ? above : fragment.bottom + 8)) };
-      panel.style.visibility = '';
-      if (placement) {
-        panel.style.maxHeight = `${placement.height}px`;
-        panel.style.top = `${placement.top}px`; panel.style.left = `${placement.left}px`;
-      }
-      return;
-    } else {
-      panel.style.top = `${Math.max(top, Math.min(bottom - height, above >= top ? above : (fragment?.bottom ?? anchor + (position?.height || 20)) + 8))}px`;
-    }
+    const end = fragment?.bottom ?? anchor + (position?.height || 20);
+    const roomAbove = Math.max(0, anchor - top - 8), roomBelow = Math.max(0, bottom - end - 8);
+    const useAbove = roomAbove >= height || roomAbove >= roomBelow;
+    const available = Math.min(height, useAbove ? roomAbove : roomBelow);
+    // Only the current anchor positions the popup when preview paints matching diffs.
+    panel.style.visibility = !available ? 'hidden' : '';
+    panel.style.maxHeight = `${available}px`;
+    panel.style.top = `${useAbove ? anchor - available - 8 : end + 8}px`;
     panel.style.left = `${Math.max(left, Math.min(right - panel.offsetWidth, fragment?.left ?? left + (position?.left || 0)))}px`;
   }
-  async function switchSide() {
-    if (!valid() || session.applying) return;
-    const saved = session, item = current(), side = presentation()?.side === 'pdf' ? 'html' : 'pdf';
-    const request = { ...saved.context.request, side, snapshot: {
-      model: saved.model, source: saved.source, version: saved.version, context: saved.context,
-      items: saved.items, choices: saved.choices, needsSave: saved.needsSave, manualSave: saved.manualSave
-    } };
-    const placement = saved.provider.presentation?.({ ...saved.context, request }, item);
-    const destination = placement?.host;
-    if (!destination) return;
-    close(false);
-    const opening = destination.open(saved.provider.id, saved.editor, item?.id, saved.position, request);
-    const targetWindow = placement.window;
-    // Re-select the existing browsing context while the click still has user
-    // activation. Chromium can ignore focus() alone on the opener's window.
-    if (targetWindow && targetWindow !== window) {
-      if (!targetWindow.name) targetWindow.name = `mew-review-${window.crypto.randomUUID()}`;
-      window.open('', targetWindow.name)?.focus();
-    }
-    placement.window?.focus();
-    await opening;
-    if (destination.isOpenFor(saved.provider.id, saved.editor)) {
-      placement.window?.focus();
-      placement.window?.document.querySelector('.replacement-review:not([hidden])')?.focus({ preventScroll: true });
-    }
-  }
   get('close').onclick = close;
-  get('switch').onclick = () => void switchSide();
+  get('switch').onclick = () => {
+    if (!valid()) return;
+    const peer = opposite(session)?.window;
+    if (!peer || peer.closed) return;
+    peer.name ||= `mew-review-${crypto.randomUUID()}`;
+    window.open('', peer.name)?.focus();
+    peer.document.querySelector('.replacement-review [data-switch]')?.focus({ preventScroll: true });
+  };
+  document.getElementById('reviewBtn')?.addEventListener('click', () => void open('pdf-ocr', window.PdfSelection?.editor));
   get('prev').onclick = () => void navigate(-1);
   get('next').onclick = () => void navigate(1);
-  get('apply').onclick = () => apply(false);
-  get('advance').onclick = () => void apply(false, true);
+  get('apply').onclick = () => {
+    if (!valid() || get('apply').disabled) return;
+    try { localStorage.setItem(previewKey, String(get('apply').getAttribute('aria-pressed') !== 'true')); } catch { return; }
+    render(true);
+    if (get('apply').getAttribute('aria-pressed') === 'true' && session.content.range) session.editor.revealRangeInCenterIfOutsideViewport(session.content.range);
+  };
+  get('advance').onclick = () => void apply(false);
   get('all').onclick = () => apply(true);
   async function save() {
     const saved = session, owner = workspace();
@@ -592,7 +618,7 @@
       const source = saved.model.getValue();
       const result = await owner.save({ followPdf: false });
       if (result === false) throw new Error('保存失败，修改仍未保存，请重试。');
-      if (session === saved && result !== false && saved.model.getValue() === source) {
+      if (session === saved && saved.model.getValue() === source) {
         saved.needsSave = false; saved.manualSave = false;
         if (valid()) render();
         else message('已保存。差异更新中…');
@@ -605,17 +631,43 @@
   get('file').onchange = () => void preview();
   get('expanded').ontoggle = () => { void preview(); place(); };
   panel.addEventListener('keydown', event => { event.stopPropagation(); if (event.key === 'Escape') close(); });
+  window.addEventListener('blur', () => { if (!document.hasFocus()) returningToWindow = true; });
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !event.isComposing && !panel.hidden) {
+      event.preventDefault(); event.stopPropagation();
+      close(true, panel.contains(document.activeElement));
+      return;
+    }
+    if (document.hasFocus() && !['Alt', 'Control', 'Meta', 'Shift'].includes(event.key)
+      && !(event.key === 'Tab' && event.altKey)) returningToWindow = false;
+  }, true);
   document.addEventListener('pointerdown', event => {
+    // The click that returns to this window must not dismiss its review popup.
+    const returning = returningToWindow || !document.hasFocus();
+    returningToWindow = false;
+    if (panel.hidden || returning || event.composedPath().includes(panel)) return;
     const position = session?.editor.getTargetAtClientPoint(event.clientX, event.clientY)?.position;
     const api = session?.editor.getDomNode()?.ownerDocument.defaultView.monaco;
     if (position && session.anchor && api?.Range.containsPosition(session.anchor, position)) return;
-    if (!panel.hidden && !event.composedPath().includes(panel)) close(true, false);
+    close(true, false, event.button === 0 && event.composedPath().includes(session?.editor.getDomNode()) ? position : null);
   }, true);
   new ResizeObserver(queuePlace).observe(panel);
   window.addEventListener('resize', queuePlace);
+  window.addEventListener('storage', event => {
+    if ((event.key === previewKey || event.key === null) && valid()) render(true, true);
+  });
   window.addEventListener('pagehide', () => { close(); view?.dispose(); });
   window.ReplacementReview = {
     open, openForSelection, showNotice, close, refreshMenu: updateMenu,
+    mirror(saved, request) {
+      if (session?.provider.id === saved.provider.id && session.editor === saved.editor && session.model === saved.model) {
+        ++generation; clearTimeout(manualTimer);
+        Object.assign(session, { source: saved.source, version: saved.version, items: saved.items, position: saved.position,
+          choices: new Map(saved.choices), needsSave: saved.needsSave, manualSave: saved.manualSave,
+          context: { ...saved.context, request }, stale: false, manualPending: false });
+        render(true, true);
+      } else void open(saved.provider.id, saved.editor, saved.items[saved.position]?.id, saved.position, request);
+    },
     isOpenFor(id, target) { return !panel.hidden && (session?.provider.id === id && session.editor === target || lastRequest?.id === id && lastRequest.editor === target); },
     invalidate(id, changed = () => true) { if (session?.provider.id === id && changed(session.context)) stale(); },
     register(provider) {

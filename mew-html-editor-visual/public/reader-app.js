@@ -283,6 +283,7 @@
       pageTotal: volume.pages.length,
       pageIndex: index + 1,
       page: state.page,
+      nextPage: volume.pages[index + 1],
       pdfPage: state.pdfPage ?? state.page,
       volume: state.volume,
       hasPrevious: index > 0,
