@@ -1,17 +1,31 @@
-.replacement-review{position:fixed;z-index:1500;box-sizing:border-box;overflow:auto;padding:10px;border:1px solid #a87827;border-radius:6px;background:#fff8e7;color:#302510;box-shadow:0 4px 20px #0004;font:13px/1.5 sans-serif;color-scheme:light}
+.replacement-review{position:fixed;z-index:1500;box-sizing:border-box;display:flex;flex-direction:column;overflow:auto;padding:10px;border:1px solid #a87827;border-radius:6px;background:#fff8e7;color:#302510;box-shadow:0 4px 20px #0004;font:13px/1.5 sans-serif;color-scheme:light}
+.replacement-review>*{flex-shrink:0}
 .replacement-review[hidden],.replacement-review [hidden]{display:none!important}
 .replacement-review[data-content-widget]{position:absolute}
-.monaco-editor{--mew-review-added-bg:#2ea04326;--mew-review-added:#238636;--mew-review-removed-bg:#f8514926;--mew-review-removed:#cf222e}
-.monaco-editor.vs-dark,.monaco-editor.hc-black{--mew-review-added-bg:#3fb95033;--mew-review-added:#7ee787;--mew-review-removed-bg:#f8514933;--mew-review-removed:#ffa198}
-.monaco-editor .mew-review-format{text-decoration:underline dotted;text-underline-offset:3px}
-.monaco-editor .mew-review-proposed{background:var(--mew-review-added-bg);border-bottom:2px solid var(--mew-review-added);text-decoration:none}
-.monaco-editor .mew-review-current{background:var(--mew-review-removed-bg);border-bottom:1px solid var(--mew-review-removed);text-decoration:line-through;text-decoration-color:var(--mew-review-removed)}
-.monaco-editor .mew-review-insert{border-left:2px solid var(--mew-review-added);margin-left:-1px}
+.monaco-editor{--mew-review-added-bg:#22a44759;--mew-review-added:#357a42;--mew-review-removed-bg:#ef444459;--mew-review-removed:#b65b60}
+.monaco-editor.vs-dark,.monaco-editor.hc-black{--mew-review-added-bg:#3fb95066;--mew-review-added:#85c995;--mew-review-removed-bg:#f8514966;--mew-review-removed:#d99191}
+.monaco-editor .mew-review-format{text-decoration:underline dotted;text-decoration-color:var(--vscode-editorInfo-foreground,#6b8caf);text-decoration-thickness:1px;text-underline-offset:3px}
+.monaco-editor .mew-review-proposed{background:var(--mew-review-added-bg);border-radius:2px;text-decoration:none}
+.monaco-editor .mew-review-current{background:var(--mew-review-removed-bg);border-radius:2px;text-decoration:line-through;text-decoration-thickness:1px;text-decoration-color:var(--mew-review-removed)}
+.monaco-editor .mew-ocr-diff-line{border-left:3px solid #d58b24;margin-left:3px;cursor:pointer}
+.monaco-editor .mew-ocr-diff-text{background:rgba(255,166,40,.3);border-bottom:1px solid #d58b24;cursor:pointer}
+.monaco-editor .mew-font-diff-text{text-decoration:underline wavy var(--vscode-editorWarning-foreground,#b87516);text-underline-offset:3px;cursor:pointer}
+.monaco-editor .mew-ocr-diff-insert{display:inline-block;width:2px;border-left:2px solid #d58b24;box-sizing:border-box;position:relative;z-index:1;cursor:pointer}
 .replacement-review .monaco-diff-editor .line-insert,.replacement-review .monaco-diff-editor .line-delete{background:transparent}
 .replacement-review [data-apply][aria-pressed="true"]{background:#d58b244d;box-shadow:inset 0 0 0 1px #a87827}
 .mew-pdf-review-pointer>div{background:rgba(255,196,0,.42)!important}
 .mew-pdf-review-pointer.mew-pdf-default-highlight>div{background:rgba(255,166,40,.18)!important;box-shadow:inset 0 -1px #b87516}
-.replacement-review [data-comparison]{white-space:pre-wrap;overflow-wrap:anywhere;max-height:25vh;overflow:auto}
+.replacement-review [data-comparison]{display:flex;flex-direction:column;flex-shrink:1;min-height:0;max-height:50vh;overflow:hidden;white-space:pre-wrap;overflow-wrap:anywhere;gap:8px}
+.replacement-review [data-comparison]>div{min-height:0;overflow:auto}
+:is(body,body.dark) .replacement-review,:is(body,body.dark) .replacement-review [data-comparison]>div{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--muted,#888) 35%,transparent) transparent}
+:is(.replacement-review,.replacement-review [data-comparison]>div)::-webkit-scrollbar{width:8px;height:8px}
+.replacement-review::-webkit-scrollbar-track,.replacement-review::-webkit-scrollbar-corner,.replacement-review [data-comparison]>div::-webkit-scrollbar-track,.replacement-review [data-comparison]>div::-webkit-scrollbar-corner{background:transparent}
+:is(.replacement-review,.replacement-review [data-comparison]>div)::-webkit-scrollbar-thumb{border:0;border-radius:0;background:color-mix(in srgb,var(--muted,#888) 35%,transparent)}
+:is(.replacement-review,.replacement-review [data-comparison]>div):hover::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted,#888) 50%,transparent)}
+:is(.replacement-review,.replacement-review [data-comparison]>div)::-webkit-scrollbar-thumb:hover{background:color-mix(in srgb,var(--muted,#888) 65%,transparent)}
+:is(.replacement-review,.replacement-review [data-comparison]>div)::-webkit-scrollbar-thumb:active{background:color-mix(in srgb,var(--muted,#888) 80%,transparent)}
+:is(.replacement-review,.replacement-review [data-comparison]>div)::-webkit-scrollbar-button{display:none;width:0;height:0}
+@supports selector(::-webkit-scrollbar){:is(body,body.dark) .replacement-review,:is(body,body.dark) .replacement-review [data-comparison]>div{scrollbar-width:auto;scrollbar-color:auto}}
 .replacement-review mark{background:#ffa62855;color:inherit;font-weight:bold}
 .replacement-review mark:empty{display:inline-block;position:relative;z-index:1;width:6px;margin:0 -3px;height:1.1em;vertical-align:-.15em;background:linear-gradient(#ffa62855,#ffa62855) center/2px 100% no-repeat}
 body.dark .replacement-review{background:#25221c;color:#e1d7c4;border-color:#97713c;color-scheme:dark}
@@ -31,6 +45,8 @@ body>header #replacementFeatures .review-feature>button:hover{background:var(--l
 .replacement-review.compact [data-title],.replacement-review.compact [data-options]{display:none}
 .replacement-review.compact .review-heading{gap:6px;justify-content:flex-end}
 .replacement-review.compact [data-position]{margin-right:auto}
-.replacement-review.compact [data-comparison]{max-height:135px;font:12px/1.45 sans-serif}
+.replacement-review.compact [data-comparison]{font:12px/1.45 sans-serif}
 .replacement-review.compact .review-controls{margin:5px 0 0;gap:5px}
 .replacement-review.compact button{padding:2px 6px}
+.mew-review-suggestions .action-widget{font-size:12px;padding:2px;max-width:min(320px,60vw)}
+.mew-review-suggestions .action-widget .title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

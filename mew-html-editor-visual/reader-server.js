@@ -83,10 +83,15 @@ function readerSettings(value = {}) {
     ink: color(value.ink, "#000000"),
     invert: Boolean(value.invert),
     horizontal: Boolean(value.horizontal),
+    splitView: value.splitView === true,
     scale: typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : "page-width",
+    editorScale: typeof value.editorScale === "number" && Number.isFinite(value.editorScale) ? Math.max(.8, Math.min(1.6, value.editorScale)) : 1,
+    tagScale: typeof value.tagScale === "number" && Number.isFinite(value.tagScale) ? Math.max(.8, Math.min(1.6, value.tagScale)) : 1,
     diffHighlight: value.diffHighlight !== false,
     sourceDiffHighlight: value.sourceDiffHighlight !== false,
-    selectionHighlight: value.selectionHighlight !== false
+    selectionHighlight: value.selectionHighlight !== false,
+    italicDetection: value.italicDetection !== false,
+    boldDetection: value.boldDetection !== false
   };
 }
 
@@ -513,6 +518,11 @@ http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     if (url.pathname.startsWith("/api/reader/")) return await api(req, res, url);
+    if (["/", "/reader.html"].includes(url.pathname)) {
+      const mode = url.searchParams.get("view") || ((await loadReaderSettings()).splitView ? "reader" : "combined");
+      const html = await fs.readFile(path.join(PUBLIC, "reader.html"), "utf8");
+      return reply(res, 200, mode === "reader" ? html.replace("<body>", '<body class="reader-only">') : html, MIME[".html"]);
+    }
     if (url.pathname === "/mewde.css") return reply(res, 200, await editorCss(), MIME[".css"]);
     if (["/api/tree", "/api/events", "/api/file", "/api/save", "/api/create"].includes(url.pathname)
       || url.pathname.startsWith("/raw/")) return await editorApi(req, res, url);

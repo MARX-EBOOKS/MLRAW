@@ -7,7 +7,7 @@
   const fileLabel = path => path.split('/').pop() || path || 'Untitled';
 
   const footer = window.MewEditorCore.footer;
-  const notify = (message, persistent) => footer.notify(message, persistent);
+  const { notify, setLanguage, setPosition } = footer;
 
   function setupLayout() {
     const key = 'mew-editor-layout-v1';
@@ -285,7 +285,7 @@
     return { configure, refresh, scheduleRefresh, filter, setActive, collapse, reveal, creationDirectory };
   })();
 
-  function mountTagPanel({ tags, attrs, storageKey, onTag, onAttr, onNavigate, onEditorScale }) {
+  async function mountTagPanel({ tags, attrs, storageKey, onTag, onAttr, onNavigate, onEditorScale }) {
     byId('tagBar').innerHTML = [
       ...tags.map((tag, index) => `<button class="tag" data-i="${index}" title="${escapeHtml(tag.title)}">${escapeHtml(tag.label)}</button>`),
       '<span class="spacer"></span>',
@@ -304,6 +304,8 @@
     };
     let oldLayout = {};
     try { oldLayout = JSON.parse(localStorage.getItem('mew-editor-layout-v1') || '{}'); } catch {}
+    const readerLinked = new URLSearchParams(location.search).has('readerSession');
+    let settingsLoaded = false;
     const tagPanel = window.MewTagPanel.mount({
       content: '#tagBar',
       host: '.editorPane',
@@ -315,8 +317,20 @@
         document.documentElement.style.setProperty('--editor-scale', scale);
         onEditorScale(scale);
       },
+      onScaleChange(patch) {
+        if (settingsLoaded) fetch('/api/reader/settings', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(patch) }).catch(() => notify('无法保存缩放设置', true));
+      },
       editorSelector: '#monacoEditor'
     });
+    if (readerLinked) {
+      try {
+        const response = await fetch('/api/reader/settings');
+        if (!response.ok) throw new Error('无法读取缩放设置');
+        const settings = await response.json();
+        tagPanel.restoreScales(settings);
+        settingsLoaded = true;
+      } catch { notify('无法读取缩放设置', true); }
+    }
   }
 
   function editorScale() {
@@ -572,8 +586,7 @@
     themeColors, renderPreview, clearPreview, setTheme, askClose, askFileName, bindWorkbench,
     isDark() { return document.body.classList.contains('dark'); },
     setReaderLinkedTitle() { document.title = 'MEW Monaco Editor · 阅读器联控'; },
-    setLanguage(text) { footer.setLanguage(text); },
-    setPosition(line, column) { footer.setPosition(line, column); },
+    setLanguage, setPosition,
     showMonacoError(error) { notify(`Monaco 加载失败：${error.message || error}`, true); }
   };
 })();

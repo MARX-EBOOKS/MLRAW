@@ -384,6 +384,7 @@
       value = Math.round(clamp(value, MIN_SCALE, MAX_SCALE) * 100) / 100;
       if (target === "editor") editorScale = value; else state.scale = value;
       updateScale(target); updateWindowDock(); save();
+      options.onScaleChange?.({ [`${target}Scale`]: value });
     };
     actions.addEventListener("click", event => {
       const scaleButton = event.target.closest("[data-scale-action]");
@@ -432,7 +433,7 @@
     window.addEventListener("resize", () => { clampFloating(); updateWindowDock(); });
     window.addEventListener(options.chromeResizeEvent || "reader-chrome-resize", updateWindowDock);
     for (const eventName of options.layoutEvents || []) window.addEventListener(eventName, updateWindowDock);
-    window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, scale: 1 }); updateScale("editor"); apply(); save(); });
+    window.addEventListener("mew-tag-panel-reset", () => { editorScale = 1; Object.assign(state, { dock: "editor-top", x: 60, y: 96, w: 520, scale: 1 }); updateScale("editor"); apply(); save(); options.onScaleChange?.({ editorScale, tagScale: state.scale }); });
     const toggle = document.getElementById("tagPanelToggle");
     if (toggle) {
       toggle.title = panel.hidden ? "打开标签编辑框（Ctrl+Alt+M）" : "隐藏标签编辑框（Ctrl+Alt+M）";
@@ -449,7 +450,14 @@
       updateWindowDock();
     };
     toggle?.addEventListener("click", () => setVisible(panel.hidden));
-    return { panel, setDock, setScale, setVisible, state };
+    return { panel, setDock, setScale, setVisible, state,
+      restoreScales(settings) {
+        for (const target of ["editor", "tag"]) {
+          const scale = settings[`${target}Scale`];
+          setScale(target, typeof scale === "number" && Number.isFinite(scale) ? scale : 1);
+        }
+      }
+    };
   }
   window.MewTagPanel = { mount, tags, attrs, tagMap, tagForKeyEvent, blockTagNames, TagEditor };
 })();

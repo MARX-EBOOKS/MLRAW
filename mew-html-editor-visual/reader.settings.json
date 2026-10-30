@@ -1,8 +1,16 @@
 {
-  "brightness": 100,
+  "brightness": 90.0,
   "paper": "#f4edd8",
   "ink": "#2b2925",
   "invert": false,
   "horizontal": false,
-  "scale": "1.5"
+  "splitView": true,
+  "scale": "1.25",
+  "editorScale": 1,
+  "tagScale": 1,
+  "diffHighlight": true,
+  "sourceDiffHighlight": true,
+  "selectionHighlight": true,
+  "italicDetection": true,
+  "boldDetection": false
 }

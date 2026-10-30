@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import queue
 import re
+import signal
 import sys
 import threading
 from fastapi import FastAPI, Request
@@ -74,10 +75,15 @@ def settings(value=None):
     return dict(brightness=max(50, min(160, brightness)), paper=color('paper', '#ffffff'),
                 ink=color('ink', '#000000'), invert=bool(value.get('invert')),
                 horizontal=bool(value.get('horizontal')),
+                splitView=value.get('splitView') is True,
                 scale=scale if isinstance(scale, str) and len(scale) <= 32 else 'page-width',
+                editorScale=max(.8, min(1.6, value['editorScale'])) if finite(value.get('editorScale')) else 1,
+                tagScale=max(.8, min(1.6, value['tagScale'])) if finite(value.get('tagScale')) else 1,
                 diffHighlight=value.get('diffHighlight') is not False,
                 sourceDiffHighlight=value.get('sourceDiffHighlight') is not False,
-                selectionHighlight=value.get('selectionHighlight') is not False)
+                selectionHighlight=value.get('selectionHighlight') is not False,
+                italicDetection=value.get('italicDetection') is not False,
+                boldDetection=value.get('boldDetection') is not False)
 
 
 def load_settings():
@@ -303,12 +309,13 @@ def create_app(library, legacy=False):
         if path == '/api/reader/locate':
             if not library.editor_root:
                 return reply(404, dict(error='此配置没有本地编辑目录'))
-            _, relative = library.editor_target(param('path'))
+            file, _ = library.editor_target(param('path'))
             for volume in library.volumes:
-                for page in volume['pages']:
-                    target = library.editor_path(volume, page)
-                    if target and target.lower() == relative.lower():
-                        return reply(200, dict(volume=volume['id'], page=page, path=target))
+                directory = volume['pageDir']
+                if directory['kind'] == 'file' and directory['path'] == file.parent:
+                    for page in volume['pages']:
+                        if volume['pageFiles'][page].lower() == file.name.lower():
+                            return reply(200, dict(volume=volume['id'], page=page, path=library.editor_path(volume, page)))
             return reply(404, dict(error='File is not in the reader configuration'))
         if path.startswith('/api/reader/') and len(parts) >= 4:
             kind, volume = parts[2], library.volume(parts[3])
@@ -398,6 +405,10 @@ def create_app(library, legacy=False):
             return reply(200, css(), MIME['.css'])
         if path.startswith('/api/'):
             return reply(404, dict(error='Unknown API'))
+        if path in ('/', '/reader.html'):
+            mode = param('view') or ('reader' if load_settings()['splitView'] else 'combined')
+            html = (public / 'reader.html').read_bytes().decode('utf-8')
+            return reply(200, html.replace('<body>', '<body class="reader-only">') if mode == 'reader' else html, MIME['.html'])
         root, relative = public, path.lstrip('/') or 'reader.html'
         for prefix, directory in (('/vendor/pdfjs/', HERE / 'node_modules/pdfjs-dist'), ('/monaco/', monaco)):
             if path.startswith(prefix):
@@ -441,6 +452,9 @@ def main():
     if not library.volumes:
         parser.exit(1, f'配置 {config} 没有扫描到任何卷。请检查 htmlRoot 与 pagePattern。\n')
     server = uvicorn.Server(uvicorn.Config(create_app(library, args.legacy), host='0.0.0.0', port=args.port))
+    handle_exit = server.handle_exit
+    # Ctrl+C must not wait for open SSE connections or background work.
+    server.handle_exit = lambda sig, frame: os._exit(0) if sig == signal.SIGINT else handle_exit(sig, frame)
     if os.environ.get('MEW_READER_LAUNCHER') == '1':
         def launcher_closed():
             sys.stdin.buffer.read()

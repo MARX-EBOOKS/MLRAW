@@ -25,7 +25,7 @@
     pdfPage: null,
     document: new DocumentModel({ editable: false }),
     mode: "source",
-    workspaceMode: initialParams.get("view") === "reader" ? "reader" : "combined",
+    workspaceMode: document.body.classList.contains("reader-only") || initialParams.get("view") === "reader" ? "reader" : "combined",
     syncSession: requestedSession,
     navigationRevision: 0,
     pendingPdfNavigation: null
@@ -38,6 +38,8 @@
   let locateRevision = 0;
   let combineRequest = null;
   const editorPathCache = new Map();
+  const documents = new Map();
+
 
   async function api(url, options) {
     const response = await fetch(url, options);
@@ -81,6 +83,7 @@
     if (message.type === "editor-ready") return announceReaderPage();
     if (message.type !== "editor-page" || !message.path) return;
     const revision = ++locateRevision;
+    if (message.path === editorPathCache.get(`${state.volume}:${state.page}`)) return;
     try {
       const target = await api(`/api/reader/locate?path=${encodeURIComponent(message.path)}`);
       if (revision !== locateRevision || combineRequest) return;
@@ -106,7 +109,6 @@
     source = new MonacoController(monaco, byId("monacoEditor"), {
       page: "reader", scale: ui.editorScale(), dark: ui.isDark(), readOnly: true
     });
-    source.setModel(source.createModel({ text: "", language: "html", uri: monaco.Uri.parse("mew-reader:///page.html"), onChange: () => updateWorkingCopy(source.getValue()) }));
     tagEditor = new tagPanel.TagEditor(source);
     source.editor.onDidChangeCursorSelection(({ selection }) => {
       ui.setPosition(selection.positionLineNumber, selection.positionColumn);
@@ -126,7 +128,7 @@
         else if (tagMap.has(shortcut)) editTag(tagMap.get(shortcut));
       });
     }
-    window.readerMonaco = { editor: source.editor, model: source.model, save, showSource: () => setMode('source'),
+    window.readerMonaco = { editor: source.editor, get model() { return source.model; }, save, showSource: () => setMode('source'),
       reviewFiles() {
         const pages = currentVolume()?.pages || [], volume = state.volume;
         return { current: state.page, files: [...pages], async open(page) {
@@ -180,6 +182,7 @@
   }
 
   function updateWorkingCopy(text = currentSource()) {
+    if (state.workspaceMode === "reader") return state.document.content;
     text = state.document.textFromEditor(text);
     state.document.update(text);
     if (state.mode === "visual") source.setValue(text, true, "reader.visual");
@@ -252,6 +255,14 @@
     for (const page of candidates) {
       try {
         const url = `/api/reader/page/${encodeURIComponent(volume.id)}/${page}`;
+        const key = `${volume.id}:${page}`;
+        if (documents.has(key)) {
+          const document = documents.get(key);
+          await document.refresh();
+          if (document.model && document.textFromEditor(document.model.getValue()) !== document.content)
+            document.model.setValue(document.content);
+          return { page, document, editorPath: editorPathCache.get(key) };
+        }
         const data = await api(url);
         const document = new DocumentModel({
           ...data,
@@ -261,6 +272,7 @@
             body: JSON.stringify(snapshot)
           })
         });
+        documents.set(key, document);
         return { page, document, editorPath: data.path || null };
       } catch (error) {
         // Missing local/remote files fall back to the previous available page.
@@ -328,12 +340,21 @@
       // HTML fallback page. Volumes without a PDF retain navigation memory.
       if (!volume.pdfUrl) rememberPdfPage(state.pdfPage);
       if (editorPath) editorPathCache.set(`${volume.id}:${page}`, editorPath);
+      if (!readerOnly && source.model) previousDocument.viewState = source.editor.saveViewState();
       state.document = document;
       if (!readerOnly) {
+        document.model ||= source.createModel({ text: document.content, language: "html",
+          uri: monaco.Uri.from({ scheme: "mew-reader", path: `/${volume.id}/${page}.html` }),
+          onChange: model => {
+            document.update(document.textFromEditor(model.getValue()));
+            if (state.document === document) { markDirty(); updateHistoryButtons(); }
+          }
+        });
+        source.setModel(document.model);
         source.setEditable(document.editable);
-        source.setValue(document.content);
         markDirty();
-        setMode(state.mode, { resetSourceScroll: true });
+        setMode(state.mode, { resetSourceScroll: !document.viewState });
+        if (document.viewState) source.editor.restoreViewState(document.viewState);
       } else syncUrl();
       if (volumeChanged) ui.renderToc(volume.shortTitle, volume.toc);
       renderNavigation();
@@ -356,6 +377,7 @@
   }
 
   async function save(options = {}) {
+    if (state.workspaceMode === "reader") return false;
     const followPdf = options.followPdf !== false;
     if (state.page == null) return true;
     updateWorkingCopy();
@@ -409,6 +431,8 @@
       else popup.location.replace(url);
       pairedWindow = popup;
       announceReaderPage();
+      await api("/api/reader/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ splitView: true }) })
+        .catch(error => notify(`无法保存分窗设置：${error.message}`, true));
       return true;
     } catch (error) {
       popup.close();
@@ -438,9 +462,8 @@
     renderNavigation();
     syncUrl();
     if (!(await openPairedEditor(popup))) return false;
-    // Reload through the pure-reader entry path so this window releases the
-    // already-created Monaco instance instead of merely hiding its DOM.
-    location.reload();
+    // Keep the PDF and its subscriptions alive while selection moves to the paired editor.
+    window.PdfSelection?.refresh();
     return true;
   }
 
@@ -476,6 +499,8 @@
     state.workspaceMode = "combined";
     ui.setWorkspaceMode("combined", state.config?.editorAvailable);
     syncUrl();
+    await api("/api/reader/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ splitView: false }) })
+      .catch(error => notify(`无法保存分窗设置：${error.message}`, true));
     location.reload();
   }
 
@@ -676,6 +701,11 @@
     ui.init({
       theme: dark => { if (monaco) core.setMonacoTheme(monaco, dark); },
       editorScale: value => source?.setScale(value),
+      sourceEditor: workbench => {
+        if (state.workspaceMode !== "reader") return source?.editor;
+        const model = workbench?.documents.get(editorPathCache.get(`${state.volume}:${state.page}`))?.model;
+        return model && workbench.editor.getModel() === model ? workbench.editor : null;
+      },
       mode: () => setMode(), save, undo, redo, volume: changeVolume,
       splitView: enterSplitView, combinedView: restoreCombinedView,
       page: (page) => navigate(state.volume, page), adjacent,
@@ -696,6 +726,8 @@
       pdfPageChange: ({ pageNumber, pageLabel, url }) => {
         const volume = currentVolume();
         if (!volume || (url && url !== volume.pdfUrl)) return;
+        const pageChanged = currentPdfPage?.volume !== volume.id || (currentPdfPage?.pageNumber != null
+          ? currentPdfPage.pageNumber !== pageNumber : currentPdfPage?.pageLabel !== pageLabel);
         currentPdfPage = { volume: volume.id, pageNumber, pageLabel };
         const page = rememberPdfPage(pageLabel);
         if (page == null) return;
@@ -705,8 +737,10 @@
         // Several PDF pages can map to the same HTML file. Keep its working
         // copy instead of starting a redundant asynchronous reload.
         if (volume.pages.filter(candidate => candidate <= page).at(-1) === state.page) {
-          ++state.navigationRevision;
-          ++locateRevision;
+          if (pageChanged) {
+            ++state.navigationRevision;
+            ++locateRevision;
+          }
           state.pendingPdfNavigation = null;
           return;
         }
@@ -731,11 +765,13 @@
       }
     });
     try {
-      const [config] = await Promise.all([
+      const [config, settings] = await Promise.all([
         api("/api/reader/config"),
-        state.workspaceMode !== "reader" ? ensureEditorRuntime() : Promise.resolve()
+        api("/api/reader/settings").catch(() => ({}))
       ]);
       state.config = config;
+      if (!initialParams.has("view")) state.workspaceMode = settings.splitView === true ? "reader" : "combined";
+      if (state.workspaceMode !== "reader") await ensureEditorRuntime();
       const requestedMode = initialParams.get("mode");
       if (requestedMode === "source" || requestedMode === "visual") state.mode = requestedMode;
       if (state.workspaceMode === "reader" && !state.syncSession) state.syncSession = newSession();
@@ -750,6 +786,7 @@
       const initialPage = Number(initialParams.get("page")) ||
         (firstVolume.id === rememberedVolume && Number.isFinite(rememberedPage) && rememberedPage > 0 ? rememberedPage : firstVolume.pages[0]);
       await navigate(firstVolume.id, initialPage, true);
+      if (state.workspaceMode === "reader" && state.config.editorAvailable) await enterSplitView();
     } catch (error) {
       ui.renderNavigation({
         chapterTitle: "载入失败", chapterPage: null, pageContext: "", pageTotal: "", pageIndex: "",
@@ -765,6 +802,9 @@
     if (revision !== directoryRefreshRevision || !state.config) return;
     state.config = config;
     editorPathCache.clear();
+    if (state.workspaceMode === "reader") await announceReaderPage();
+    if (revision !== directoryRefreshRevision) return;
+    window.PdfSelection?.refresh();
     ui.renderVolumes(config.volumes, state.volume);
     renderNavigation();
     const origin = currentPdfPage;

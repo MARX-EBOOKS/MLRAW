@@ -14,6 +14,7 @@
   const listeners = {};
   let initialized = false;
   let editorScale = 1;
+  let panelSettingsLoaded = false;
   const footer = window.MewEditorCore.footer;
   let pendingPdfOptions = null;
   let pdfRuntimePromise = null, pdfViewer = null, pdfLinkService = null, pdfLoadingTask = null;
@@ -194,7 +195,7 @@
     });
   }
 
-  const notify = (message, persistent) => footer.notify(message, persistent);
+  const { notify, setPosition } = footer;
 
   const pageButtons = [
     ["prevBtn", "hasPrevious", "Alt+←", " & 保存"], ["nextPageBtn", "hasNext", "Alt+→", " & 保存"],
@@ -206,10 +207,6 @@
     for (const [id, , title, suffix] of pageButtons) {
       if (byId(id)) byId(id).title = title + (dirty ? suffix : "");
     }
-  }
-
-  function setPosition(line, column) {
-    footer.setPosition(line, column);
   }
 
   function setHistoryButtons(canUndo, canRedo) {
@@ -361,12 +358,9 @@
 
   const frameId = (id) => pdfFrame?.querySelector(`#${id}`);
   function normalizedPdfSettings(value = {}) {
-    // Diff highlighting is saved independently; PDF controls must not overwrite it.
-    const { diffHighlight, sourceDiffHighlight, selectionHighlight, ...displaySettings } = value;
-    value = displaySettings;
     const color = (input, fallback) => /^#[0-9a-f]{6}$/i.test(String(input)) ? String(input).toLowerCase() : fallback;
     const scale = typeof value.scale === "string" && value.scale.length <= 32 ? value.scale : PDF_DEFAULTS.scale;
-    return { ...PDF_DEFAULTS, ...value, brightness: Math.max(50, Math.min(160, Number(value.brightness) || 100)), paper: color(value.paper, PDF_DEFAULTS.paper), ink: color(value.ink, PDF_DEFAULTS.ink), invert: Boolean(value.invert), horizontal: Boolean(value.horizontal), scale };
+    return { brightness: Math.max(50, Math.min(160, Number(value.brightness) || 100)), paper: color(value.paper, PDF_DEFAULTS.paper), ink: color(value.ink, PDF_DEFAULTS.ink), invert: Boolean(value.invert), horizontal: Boolean(value.horizontal), scale };
   }
   function applyPdfSettings() {
     const stage = frameId("stage");
@@ -638,7 +632,9 @@
     pdfToc = []; drawToc();
     pdfUrl = url; setPdfStatus(url ? "正在载入 PDF…" : "此卷未配置 PDF");
     pdfViewer.setDocument(null); pdfLinkService.setDocument(null); pdfPageLabels = null;
-    const oldTask = pdfLoadingTask; pdfLoadingTask = null; await oldTask?.destroy();
+    const oldTask = pdfLoadingTask; pdfLoadingTask = null;
+    // Each document owns its worker; teardown must not block the next volume.
+    void oldTask?.destroy().catch(error => console.warn("PDF 清理失败：", error));
     if (!url || revision !== pdfRevision) return;
     try {
       // Range loading keeps large scans off the network/worker until needed.
@@ -684,7 +680,12 @@
       if (localStorage.getItem("readerImageInverted") != null) legacy.invert = localStorage.getItem("readerImageInverted") === "1";
       if (localStorage.getItem("readerPdfScaleValue")) legacy.scale = localStorage.getItem("readerPdfScaleValue");
       saved = { ...legacy, ...saved };
-      try { pdfSettings = normalizedPdfSettings({ ...(await fetch("/api/reader/settings").then((r) => r.ok ? r.json() : {})), ...saved }); } catch { pdfSettings = normalizedPdfSettings(saved); }
+      try {
+        const settings = await fetch("/api/reader/settings").then((r) => r.ok ? r.json() : {});
+        pdfSettings = normalizedPdfSettings({ ...saved, ...settings });
+        tagPanel?.restoreScales(settings);
+      } catch { pdfSettings = normalizedPdfSettings(saved); }
+      panelSettingsLoaded = true;
       applyPdfSettings();
       frameId("zoomIn").onclick = () => changePdfScale(1); frameId("zoomOut").onclick = () => changePdfScale(-1);
       bindScaleInput(frameId("zoomValue"), applyPdfScaleInput, showPdfScaleValue);
@@ -820,6 +821,7 @@
     byId, editorScale: () => editorScale, isDark: () => body.classList.contains("dark"),
     getVisualDocument: () => visualFrame.contentDocument,
     getPdfViewer: () => pdfViewer,
+    getSourceEditor: workbench => listeners.sourceEditor?.(workbench),
     getPdfSourcePages: () => (pdfPageLabels || []).flatMap((label, index) => {
       const page = Number(String(label).match(/^(\d+)/)?.[1]);
       return page >= sourcePageRange[0] && page < sourcePageRange[1] ? [index + 1] : [];
@@ -827,13 +829,16 @@
   };
 
 /* 编辑工具面板由 index.html 与 reader.html 共用同一个控制器。 */
-window.MewTagPanel?.mount({
+const tagPanel = window.MewTagPanel?.mount({
   content: "#tagBar",
   host: ".text-pane",
   storageKey: "readerDockPanels.v1",
   headerSelector: ".site-header",
   footerSelector: ".page-footer",
   setEditorScale: scale => window.ReaderUI?.setEditorScale(scale),
+  onScaleChange: patch => {
+    if (panelSettingsLoaded) fetch("/api/reader/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(patch) }).catch(() => {});
+  },
   editorSelector: "#sourcePane,#monacoEditor,#visualEditor",
   editorReadyEvent: "reader-visual-ready",
   layoutEvents: ["reader-mode-change"],

@@ -142,6 +142,7 @@
     model: null, automaticLayout: true, fontFamily: 'Consolas, "Cascadia Mono", monospace',
     fontSize: 14, lineHeight: 21, tabSize: 2, wordWrap: "on", minimap: { enabled: false },
     find: { addExtraSpaceOnTop: false },
+    cursorStyle: "line", cursorWidth: 2, cursorBlinking: "smooth", cursorSmoothCaretAnimation: "explicit",
     // Monaco 0.55.1 在快速切换模型时可能取消 occurrence 请求并报错。
     occurrencesHighlight: "off", scrollBeyondLastLine: false, padding: { top: 14, bottom: 14 },
     colorDecorators: true, defaultColorDecorators: "never",
@@ -368,13 +369,13 @@
       .statusbar .context strong,.statusbar .context small { font-size:11px; font-weight:400; }
     `;
     document.head.append(style);
-    let timer, navigate;
-    for (const [id, direction] of [['prevFileBtn',-1],['nextFileBtn',1]]) {
-      host.querySelector('#'+id).onclick = () => navigate?.(direction);
-    }
+    let timer;
     return {
       host,
-      setNavigation(handler) { navigate = handler; },
+      setNavigation(handler) {
+        host.querySelector('#prevFileBtn').onclick = () => handler(-1);
+        host.querySelector('#nextFileBtn').onclick = () => handler(1);
+      },
       setAvailable(previous, next) {
         host.querySelector('#prevFileBtn').disabled = !previous;
         host.querySelector('#nextFileBtn').disabled = !next;
