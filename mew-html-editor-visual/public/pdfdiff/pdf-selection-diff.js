@@ -517,10 +517,14 @@ class PdfSourceIndex {
       previous.sourceEnd = item.sourceEnd;
       previous.formats.push(...item.formats);
     }
-    for (const item of candidates.slice(first)) Object.assign(item, { id: `font:${item.sourceStart}:${item.sourceEnd}`,
-      text: this.raw.slice(item.sourceStart, item.sourceEnd),
-      options: edits ? [{ id: 'format', edits: this.fontEdits(item.sourceStart, item.sourceEnd, item.font) }] : [] });
-    return candidates;
+    const text = candidates.slice(0, first);
+    for (const item of candidates.slice(first)) {
+      Object.assign(item, { id: `font:${item.sourceStart}:${item.sourceEnd}`, text: this.raw.slice(item.sourceStart, item.sourceEnd),
+        options: edits ? [{ id: 'format', edits: this.fontEdits(item.sourceStart, item.sourceEnd, item.font) }] : [] });
+      const nearby = text[lowerBound(text, item.sourceStart, range => range.sourceEnd)];
+      item.reviewStart = nearby && nearby.sourceStart <= item.sourceEnd ? nearby.sourceStart : item.sourceStart;
+    }
+    return candidates.sort((a, b) => (a.reviewStart ?? a.sourceStart) - (b.reviewStart ?? b.sourceStart) || Number(!!a.font) - Number(!!b.font));
   }
   sourceSegments(start, end, includeWhitespace = false) {
     const segments = [];

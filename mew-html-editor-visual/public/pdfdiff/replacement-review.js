@@ -143,6 +143,7 @@
   let session = null, generation = 0, pending = null, view = null, previewModels = [], disposals = [], lastRequest = null;
   let widget = null, widgetEditor = null, noticeAnchor = null, noticeLayout = null, manualTimer = null, composing = false;
   let placementFrame = null, returningToWindow = !document.hasFocus();
+  let panelMoved = false;
   const revisionMarks = window.ReviewHighlights.create({ document });
   const menu = document.getElementById('replacementFeatures');
   const panel = document.createElement('section');
@@ -349,8 +350,8 @@
         row.append(label);
       }
       if (provider.toggleOnly) { menu.append(row); continue; }
-      const button = document.createElement(provider.provide ? 'button' : 'span'); button.textContent = provider.label;
-      if (provider.provide) { button.type = 'button'; button.onclick = () => { const overflow = menu.closest('details'); if (overflow) overflow.open = false; void open(provider.id); }; }
+      const button = document.createElement((provider.locator || provider.provide) ? 'button' : 'span'); button.textContent = provider.label;
+      if (provider.locator || provider.provide) { button.type = 'button'; button.onclick = () => { const overflow = menu.closest('details'); if (overflow) overflow.open = false; void open(provider.id); }; }
       row.append(button); menu.append(row);
     }
   }
@@ -379,6 +380,7 @@
     target.addContentWidget(widget);
   }
   function close(dismiss = true, restoreFocus = true, position = null) {
+    panelMoved = false;
     cancelAnimationFrame(placementFrame); placementFrame = null;
     clearTimeout(manualTimer); manualTimer = null; composing = false;
     ++generation; pending?.abort(); pending = null;
@@ -418,22 +420,23 @@
   }
   function refreshAfterEdit(saved) {
     if (saved.refreshTask) return saved.refreshTask;
-    if (session !== saved || !saved.manualPending || composing || saved.editor.getModel() !== saved.model) return Promise.resolve();
+    if (session !== saved || !saved.manualPending || composing || saved.editor.getModel() !== saved.model || saved.provider.available?.(saved.editor) === false) return Promise.resolve();
     const request = ++generation, source = saved.model.getValue(), version = saved.model.getVersionId?.();
-    const context = { ...saved.context, source, version, request: { ...saved.context.request, snapshot: null } };
+    const context = { ...saved.context, source, version, request: { side: saved.context.request?.side } };
     return saved.refreshTask = (async () => {
     try {
-      const sameReference = !saved.provider.isCurrent || saved.provider.isCurrent(context);
-      if (!sameReference) { context.targets = null; context.request = { side: context.request?.side }; }
-      const result = sameReference && saved.provider.refreshAfterEdit
-        ? await saved.provider.refreshAfterEdit(context, saved.resumeOffset, saved)
-        : { items: await saved.provider.provide(context), position: saved.position };
+      const result = saved.provider.locator ? await saved.provider.locator.reviewItems(context) : await saved.provider.provide(context);
       if (session !== saved || request !== generation || saved.model.getValue() !== source
         || saved.model.getVersionId?.() !== version || (saved.provider.isCurrent && !saved.provider.isCurrent(context))) return;
       const { items, choices } = validateCandidates(result, saved.choices);
-      Object.assign(saved, { items, choices, position: result.position ?? saved.position,
+      const found = items.findIndex(item => {
+        const range = item.range || saved.provider.content({ ...saved, context, source, version, items, choices }, item).range;
+        return range && (saved.model.getOffsetAt({ lineNumber: range.endLineNumber, column: range.endColumn }) > saved.resumeOffset
+          || saved.model.getOffsetAt({ lineNumber: range.startLineNumber, column: range.startColumn }) >= saved.resumeOffset);
+      });
+      Object.assign(saved, { items, choices, position: found < 0 ? items.length : found,
         context, source, version, stale: false, manualPending: false });
-      render(true);
+      if (!saved.saving) render(true);
     } catch (error) { if (session === saved && request === generation) message(error.message); }
     })().finally(() => {
       saved.refreshTask = null;
@@ -473,7 +476,7 @@
     get('switch').hidden = !placement?.switchable;
     get('switch').textContent = placement?.switchLabel || '';
     get('title').textContent = provider?.label || '审阅'; get('options').replaceChildren(); get('comparison').replaceChildren(); controls();
-    if (!provider || !target?.getModel()) { message('请先打开可编辑的文件。'); place(); return; }
+    if (!provider || !target?.getModel() || provider.available?.(target) === false) { message('编辑器或审阅文档尚未就绪。'); place(); return; }
     bindSuggestions(target);
     if (provider.isEnabled?.() === false) { message('请先在菜单中启用此功能。'); place(); return; }
     if (placement?.side !== 'pdf') {
@@ -510,7 +513,7 @@
     try {
       const snapshot = requestData?.snapshot;
       const result = snapshot?.model === model && snapshot.source === source && snapshot.version === version
-        ? snapshot.items : await provider.provide(context);
+        ? snapshot.items : provider.locator ? await provider.locator.reviewItems(context) : await provider.provide(context);
       if (request !== generation || providers.get(id) !== provider) return;
       if (target.getModel() !== model || model.getValue() !== source || model.getVersionId?.() !== version
         || (provider.isCurrent && !provider.isCurrent(context))) { stale(); return; }
@@ -635,6 +638,11 @@
       // Providers receive candidate data; session lifecycle remains owned here.
       const result = await saved.provider.apply({ ...saved, context: { ...saved.context } }, all);
       if (session !== saved) return true;
+      if (result.offset !== undefined) {
+        saved.resumeOffset = result.offset; saved.manualPending = true;
+        await refreshAfterEdit(saved);
+        return true;
+      }
       const source = saved.model.getValue();
       Object.assign(saved, { items: result.items, choices: result.choices || saved.choices,
         position: result.position, context: result.context || saved.context,
@@ -661,7 +669,7 @@
     });
   }
   function place(target = session?.editor) {
-    if (panel.hidden) return;
+    if (panel.hidden || panelMoved) return;
     const layout = presentation(), pdfSide = layout?.side === 'pdf', compact = panel.classList.contains('compact');
     const node = pdfSide ? layout.container : target?.getDomNode(), rect = node?.getBoundingClientRect();
     if (layout) {
@@ -703,6 +711,21 @@
     panel.style.top = `${y}px`;
     panel.style.left = `${Math.max(left, Math.min(right - panel.offsetWidth, fragment?.left ?? left + (position?.left || 0)))}px`;
   }
+  get('position').ondblclick = () => { panelMoved = false; place(); };
+  get('position').onpointerdown = event => {
+    if (panel.dataset.side !== 'pdf' || event.button !== 0) return;
+    const handle = event.currentTarget, box = panel.getBoundingClientRect();
+    const dx = event.clientX - box.left, dy = event.clientY - box.top;
+    handle.setPointerCapture(event.pointerId);
+    handle.onpointermove = move => {
+      if (!handle.hasPointerCapture(move.pointerId)) return;
+      panelMoved = true;
+      const bounds = presentation().container.getBoundingClientRect();
+      panel.style.left = `${Math.max(bounds.left, Math.min(bounds.right - panel.offsetWidth, move.clientX - dx))}px`;
+      panel.style.top = `${Math.max(bounds.top, Math.min(bounds.bottom - panel.offsetHeight, move.clientY - dy))}px`;
+    };
+    event.preventDefault();
+  };
   get('close').onclick = close;
   get('switch').onclick = () => {
     if (!valid()) return;
@@ -787,7 +810,7 @@
     isOpenFor(id, target) { return !panel.hidden && (session?.provider.id === id && session.editor === target || lastRequest?.id === id && lastRequest.editor === target); },
     invalidate(id, changed = () => true) { if (session?.provider.id === id && changed(session.context)) stale(); },
     register(provider) {
-      if (!provider?.id || (typeof provider.provide !== 'function' && typeof provider.setEnabled !== 'function')) throw new Error('功能需要 id 和 provide(context) 或 setEnabled(enabled)');
+      if (!provider?.id || (!provider.locator && typeof provider.provide !== 'function' && typeof provider.setEnabled !== 'function')) throw new Error('功能需要 id 和 locator、provide(context) 或 setEnabled(enabled)');
       if (providers.has(provider.id)) throw new Error(`审阅功能已注册：${provider.id}`);
       providers.set(provider.id, provider); updateMenu();
       return () => { if (session?.provider === provider || lastRequest?.id === provider.id) close(); providers.delete(provider.id); updateMenu(); };

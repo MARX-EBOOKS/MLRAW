@@ -57,6 +57,8 @@ ReplacementReview.register({
 
 `ReviewHighlights.measureHighlights()` 通过索引的 `fontRuns(start, end, true)` 获取文字节点范围，复用弹窗锚点的坐标查找；`ReviewHighlights.create()` 不再接收 `lowerBound`。公共高亮模块只依赖这个索引接口，不导入 PDF 类。
 
+注册 PDF 审阅时，`locator` 直接提供共享 `PdfLocator` 实例，宿主调用其 `reviewItems(context)`，不经 `provide` 转接。当前 `model/index` 由 locator 持有并随索引读取或重建更新，分组、预览和替换读取同一份实例状态，弹窗 context 不再保存 `index/targets` 副本。`prepareReview()` 统一补齐上下文、登记并更新共享索引。未携带 `source` 时同步返回索引或 `null`，供 `available/isCurrent` 等入口使用；携带 `source` 时继续复用 `indexDocument/indexFonts` 的读取缓存，准备并返回审阅结果。`reviewItems` 保留 `if (context.source !== undefined) return this.prepareReview(context);`，不再有 `checkContext` 或额外布尔模式参数。其他 provider 保持 `provide(context)` 接口。
+
 `provide(context)` 接收 `editor/model/source/version/signal/toolbox/request`，返回候选数组或 `{ items }`。每个候选有唯一字符串 `id`，每个选项有唯一字符串 `id`。首项默认选中，选择保存于 `state.choices`。
 
 `content(state, item)` 定义弹窗内容；没有当前候选时 `item` 为 `undefined`。`comparison` 是行数组，每行包含 `label` 和 `parts: [{ text, changed }]`，由公共弹窗以纯文本渲染。`range` 控制源码选区。`options` 定义显示的单选项；`applyLabel` 定义操作文字；`advance/expanded/all: false` 可隐藏对应操作。`title` 可覆盖注册名称。公共模块不推导 HTML/PDF 对照、替换范围或裁剪方式。

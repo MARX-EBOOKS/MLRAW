@@ -78,13 +78,31 @@ review candidates, provider actions, and highlights. It loads
 `pdf-selection-diff.js` for `PdfSourceIndex`, normalization, text/format comparison,
 and edit calculations over prepared data, and `replacement-review.js` for shared
 highlight/selection tools, popup sessions, navigation, and saving.
+The shared popup loads candidates directly from the registered `locator` instance.
+`PdfLocator.prepareReview(context)` validates and fills PDF/editor/model fields,
+registers or reuses the shared source index through `editorSourceIndex()`, and
+returns it for context checks (or `null` if invalid). With `context.source`, it
+also prepares the review through `indexDocument()` and `indexFonts()`, reusing
+their existing caches, then returns the result asynchronously when needed.
+Availability, session checks, source events, and review actions share this method.
+`reviewItems` delegates source-bearing requests directly to `prepareReview`.
+`PdfLocator.reviewItems(context)` returns the shared
+`items`, groups, edits, and suggestion plans. The locator owns its current
+`model`, `index`, and PDF; `editorSourceIndex()` updates the shared model/index
+on cache hits, adopted selection indexes, and rebuilds; it also updates the
+current PDF and the per-model/PDF cache through the same write path. Prepared consumers call `locator.reviewItems()`
+without copying the index through popup context. Repeated notices reuse the
+existing review list and candidate objects, retaining their anchor caches. Prepared indexes return synchronously,
+while the first document load returns a promise. Callers may `await` either result.
+PDF/font reads are asynchronous; candidate calculation still runs synchronously
+on the main thread. There is no PDF `provide` adapter.
 The provider reuses each connection's cached text diff.
 Text comparisons use Monaco with the local fallback inside `pdf-selection-diff.js`.
 `PdfReviewReady` resolves after review initialization;
 `pdf-selection.js` waits for it and obtains its locator through the provider.
 Its `new PdfReviewProvider.PdfLocator(options, environment)` API creates a locator
 with reader-local caches. Options, environment, document, source/document caches,
-review anchors, and the no-PDF key belong to each instance; locator methods live
+review anchors, and the current PDF cache key belong to each instance; locator methods live
 on the prototype. Selection exposes this locator as `PdfSelection.locator`;
 review, including the split editor window, consumes the same locator. Each Monaco
 model/PDF pair owns one current `PdfSourceIndex` snapshot. Each snapshot exposes
