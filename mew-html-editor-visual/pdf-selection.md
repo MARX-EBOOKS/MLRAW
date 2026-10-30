@@ -70,22 +70,39 @@ native character geometry from the requested PDF pages; extracted text must matc
 the stored sequence. This geometry is never persisted. Original PDFs and scans
 remain unchanged. Restart the reader and reload the page after changing schemas.
 
-`pdf-review-provider.js` is the runtime entry. It owns normalization, source/PDF
-indexes, page scopes, contextual search, cached bidirectional connections, review
-candidate generation, provider actions and highlights. It loads
-`pdf-selection-diff.js` for font reading, text comparison and edit helpers,
-`replacement-review.js` for reusable highlight/selection tools and the shared
-popup, session, navigation and saving.
-Each script keeps its implementation in a private closure. The font/text script
-receives prepared connection comparisons for format differences and never calls
-back into the provider. The provider reuses each connection's cached text diff.
+`pdf-review-provider.js` is the runtime entry. Its `PdfLocator` reads PDF text,
+font metadata, and rendered-layer styles through `readPageText()`,
+`readPageFonts()`, and `layerFonts()`. Page reads and in-flight tasks share
+page-keyed caches across locators. It also manages source/document snapshots,
+review candidates, provider actions, and highlights. It loads
+`pdf-selection-diff.js` for `PdfSourceIndex`, normalization, text/format comparison,
+and edit calculations over prepared data, and `replacement-review.js` for shared
+highlight/selection tools, popup sessions, navigation, and saving.
+The provider reuses each connection's cached text diff.
 Text comparisons use Monaco with the local fallback inside `pdf-selection-diff.js`.
 `PdfReviewReady` resolves after review initialization;
 `pdf-selection.js` waits for it and obtains its locator through the provider.
-Its `PdfReviewProvider.createLocator(options, environment)` API creates a locator
-with reader-local caches. Selection exposes this locator as `PdfSelection.locator`;
+Its `new PdfReviewProvider.PdfLocator(options, environment)` API creates a locator
+with reader-local caches. Options, environment, document, source/document caches,
+review anchors, and the no-PDF key belong to each instance; locator methods live
+on the prototype. Selection exposes this locator as `PdfSelection.locator`;
 review, including the split editor window, consumes the same locator. Each Monaco
-model/PDF pair owns one current source snapshot. The environment supplies the current PDF, rendered page
+model/PDF pair owns one current `PdfSourceIndex` snapshot. Each snapshot exposes
+`source`, `raw`, normalized text, offsets, fonts, and connection caches. Mapping
+methods operate on their owning snapshot: `index.connectedRange(target, ...)`,
+`index.rememberConnection(...)`, `index.locate(entry, scope)`, and `index.matches(queries)`.
+Scoped locations already return absolute offsets. Editor, full-PDF, and rendered-page
+indexes use the same class; callers use `lowerBound()` for source-to-raw offsets
+and `fontRuns(start, end, true)` for font coordinate lookups.
+The complete class is exported as `PdfSelectionDiff.PdfSourceIndex` and re-exported
+by the provider. Stateless normalization, matching, coordinate search, and HTML
+font parsing helpers remain ordinary toolbox functions. Font runs, format differences,
+source segments, decorations, and text/font edits are index instance methods;
+callers use `index.textEdits(...)`, `index.fontEdits(...)`, and
+`index.sourceDecorations(...)` directly.
+The reader locator retains model/PDF caches, indexing, and preparation. Its HTML
+entity-decoding template is reused across source snapshots.
+The environment supplies the current PDF, rendered page
 indexes, idle scheduling, and cancellation checks. Selection keeps `findLocations()`,
 `locateSource()`, and `locateLayer()` as private functions using that shared locator.
 `findLocations()` returns PDF
